@@ -1,0 +1,73 @@
+services:
+  app:
+    build:
+      context: ./docker/php
+    container_name: ep_app
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    environment:
+      - PHP_IDE_CONFIG=serverName=espace-privatif
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - epnet
+
+  web:
+    image: nginx:1.25-alpine
+    container_name: ep_web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - epnet
+
+  db:
+    image: mysql:8.0
+    container_name: ep_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-espace_privatif}
+      MYSQL_USER: ${DB_USER:-app}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-app_secret}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_secret}
+    ports:
+      - "3307:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${DB_ROOT_PASSWORD:-root_secret}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - epnet
+
+  ws:
+    build:
+      context: ./docker/php
+    container_name: ep_ws
+    working_dir: /var/www/html
+    command: php bin/ws-server.php
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "8081:8081"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - epnet
+
+volumes:
+  dbdata:
+
+networks:
+  epnet:
+    driver: bridge
