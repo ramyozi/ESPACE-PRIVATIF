@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Database\Connection;
 use DI\ContainerBuilder;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -24,6 +25,11 @@ return function (ContainerBuilder $containerBuilder): void {
             }
             $logger->pushHandler(new StreamHandler($cfg['path'], $cfg['level']));
             return $logger;
+        },
+
+        // Connexion PDO partagee dans toute l'app
+        Connection::class => function (ContainerInterface $c): Connection {
+            return new Connection($c->get('settings')['db']);
         },
 
     ]);
