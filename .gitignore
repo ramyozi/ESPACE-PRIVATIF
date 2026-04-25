@@ -1,0 +1,28 @@
+# Dépendances
+/vendor/
+/node_modules/
+
+# Variables d'environnement
+.env
+.env.local
+.env.*.local
+
+# Logs
+/var/log/*
+!/var/log/.gitkeep
+*.log
+
+# Fichiers générés
+/var/cache/*
+!/var/cache/.gitkeep
+/storage/pdfs/*
+!/storage/pdfs/.gitkeep
+/storage/signatures/*
+!/storage/signatures/.gitkeep
+
+# Système
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
