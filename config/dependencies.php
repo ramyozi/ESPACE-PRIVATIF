@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use App\Database\Connection;
+use App\Repositories\UserRepository;
+use App\Services\AuthService;
 use DI\ContainerBuilder;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -10,7 +12,6 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
 return function (ContainerBuilder $containerBuilder): void {
-    // Reglages applicatifs
     $containerBuilder->addDefinitions(require __DIR__ . '/settings.php');
 
     $containerBuilder->addDefinitions([
@@ -27,10 +28,17 @@ return function (ContainerBuilder $containerBuilder): void {
             return $logger;
         },
 
-        // Connexion PDO partagee dans toute l'app
-        Connection::class => function (ContainerInterface $c): Connection {
-            return new Connection($c->get('settings')['db']);
-        },
+        // Connexion PDO partagee
+        Connection::class => fn (ContainerInterface $c) => new Connection($c->get('settings')['db']),
+
+        // Repositories
+        UserRepository::class => fn (ContainerInterface $c) => new UserRepository($c->get(Connection::class)),
+
+        // Services metier
+        AuthService::class => fn (ContainerInterface $c) => new AuthService(
+            $c->get(UserRepository::class),
+            $c->get(LoggerInterface::class),
+        ),
 
     ]);
 };
