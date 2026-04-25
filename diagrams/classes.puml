@@ -1,0 +1,205 @@
+@startuml classes
+skinparam classAttributeIconSize 0
+skinparam shadowing false
+hide circle
+
+package "Tenant" {
+  class Tenant {
+    +id: int
+    +code: string
+    +name: string
+    +active: bool
+  }
+
+  class Residence {
+    +id: int
+    +tenantId: int
+    +name: string
+    +managerEmail: string
+  }
+}
+
+package "Auth" {
+  class User {
+    +id: int
+    +tenantId: int
+    +residenceId: int
+    +email: string
+    +firstName: string
+    +lastName: string
+    +phone: string
+    +verifyPassword(plain: string): bool
+    +isLocked(): bool
+  }
+
+  class MagicLink {
+    +id: int
+    +userId: int
+    +tokenHash: string
+    +purpose: enum
+    +expiresAt: datetime
+    +consume(): void
+  }
+
+  class OtpCode {
+    +id: int
+    +userId: int
+    +codeHash: string
+    +target: string
+    +attempts: int
+    +verify(plain: string): bool
+  }
+
+  class AuthService {
+    +login(email, password): User
+    +sendMagicLink(email, purpose): void
+    +consumeMagicLink(token): User
+  }
+}
+
+package "Document" {
+  enum DocumentState {
+    EN_ATTENTE_SIGNATURE
+    SIGNATURE_EN_COURS
+    SIGNE
+    SIGNE_VALIDE
+    REFUSE
+    EXPIRE
+  }
+
+  class Document {
+    +id: int
+    +tenantId: int
+    +userId: int
+    +sothisDocumentId: string
+    +type: string
+    +title: string
+    +state: DocumentState
+    +pdfPath: string
+    +pdfSha256: string
+    +signedPdfPath: string
+    +deadline: datetime
+    +canBeSigned(): bool
+    +transitionTo(state): void
+  }
+
+  class SignatureField {
+    +id: int
+    +documentId: int
+    +name: string
+    +page: int
+    +x: int
+    +y: int
+    +width: int
+    +height: int
+    +required: bool
+  }
+
+  class DocumentService {
+    +listForUser(user): Document[]
+    +get(user, id): Document
+    +markSigned(doc): void
+    +markValidated(doc, finalPath): void
+  }
+}
+
+package "Signature" {
+  class Signature {
+    +id: int
+    +documentId: int
+    +userId: int
+    +imagePath: string
+    +imageSha256: string
+    +signedAt: datetime
+    +ip: string
+    +userAgent: string
+    +consentMethod: string
+    +consentProof: json
+  }
+
+  class SignatureService {
+    +startSignature(user, doc): SignatureSession
+    +sendOtp(session): void
+    +completeSignature(session, otp, image): Signature
+    +refuse(user, doc, reason): void
+  }
+}
+
+package "Sothis" {
+  class SothisGateway {
+    +pushSignatureCompleted(payload): void
+    +onDocumentFinalized(payload): void
+  }
+
+  class WsOutboxItem {
+    +id: int
+    +messageId: string
+    +type: string
+    +payload: json
+    +status: enum
+    +attempts: int
+  }
+
+  class WsOutboxWorker {
+    +tick(): void
+    +retryFailed(): void
+  }
+}
+
+package "Mail" {
+  class MailService {
+    +queue(template, to, vars): void
+  }
+
+  class MailQueueItem {
+    +id: int
+    +toEmail: string
+    +template: string
+    +variables: json
+    +status: enum
+  }
+}
+
+package "Audit" {
+  class AuditLog {
+    +id: int
+    +tenantId: int
+    +userId: int
+    +action: string
+    +targetType: string
+    +targetId: string
+    +context: json
+    +prevHash: string
+    +rowHash: string
+    +createdAt: datetime
+  }
+
+  class AuditLogger {
+    +log(action, target, context): void
+    +verifyChain(tenantId): bool
+  }
+}
+
+Tenant "1" -- "*" Residence
+Residence "1" -- "*" User
+Tenant "1" -- "*" User
+User "1" -- "*" Document
+Document "1" -- "*" SignatureField
+Document "1" -- "*" Signature
+User "1" -- "*" MagicLink
+User "1" -- "*" OtpCode
+
+DocumentService ..> Document
+SignatureService ..> Signature
+SignatureService ..> Document
+SignatureService ..> OtpCode
+SignatureService ..> SothisGateway
+SignatureService ..> MailService
+SignatureService ..> AuditLogger
+SothisGateway ..> WsOutboxItem
+WsOutboxWorker ..> WsOutboxItem
+MailService ..> MailQueueItem
+AuthService ..> User
+AuthService ..> MagicLink
+
+@enduml

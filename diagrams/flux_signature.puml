@@ -1,0 +1,82 @@
+@startuml flux_signature
+skinparam shadowing false
+title Flux détaillé du processus de signature
+
+|Locataire|
+start
+:Reçoit le mail de signature;
+:Clique sur le lien;
+
+|ESPACE-PRIVATIF|
+:Vérifie session (ou propose login);
+if (Authentifié ?) then (oui)
+  :Charge le document;
+  :Vérifie tenant + propriétaire;
+  if (État = en_attente_signature ?) then (oui)
+    :Passe en signature_en_cours;
+    :Affiche PDF + canvas signature;
+  else (non)
+    :Affiche message d'état;
+    stop
+  endif
+else (non)
+  :Redirige vers login;
+  stop
+endif
+
+|Locataire|
+:Lit le document;
+:Coche le consentement RGPD;
+:Trace sa signature;
+:Valide;
+
+|ESPACE-PRIVATIF|
+:Génère OTP (6 chiffres);
+:Stocke hash + expiration 5 min;
+:Envoie mail OTP;
+
+|Locataire|
+:Saisit l'OTP;
+
+|ESPACE-PRIVATIF|
+if (OTP valide ?) then (oui)
+  :Stocke image PNG hors webroot;
+  :Calcule sha256 image;
+  :Insert signature (ip, ua, horodatage);
+  :Passe document en "signé";
+  :Insert audit_log avec hash chaîné;
+  :Insert ws_outbox (signature.completed);
+  :Queue mail locataire + responsable;
+else (non)
+  if (Tentatives < 3 ?) then (oui)
+    :Demande nouveau code;
+    stop
+  else (non)
+    :Bloque l'opération;
+    :Insert audit_log (sign_failed);
+    :Repasse document en en_attente_signature;
+    stop
+  endif
+endif
+
+|Worker WS|
+:Lit ws_outbox;
+:Émet vers SOTHIS;
+:Attend ack;
+if (Ack reçu ?) then (oui)
+  :Marque acked;
+else (non)
+  :Retry exponentiel;
+endif
+
+|SOTHIS|
+:Génère le PDF signé final;
+:Émet document.finalized;
+
+|ESPACE-PRIVATIF|
+:Stocke le PDF final;
+:Passe en signe_valide;
+:Mail final avec lien sécurisé;
+stop
+
+@enduml

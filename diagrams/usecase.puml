@@ -1,0 +1,46 @@
+@startuml usecase
+left to right direction
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+actor "Locataire" as Loc
+actor "Responsable\nde résidence" as Resp
+actor "SOTHIS" as Sothis
+actor "Administrateur" as Admin
+
+rectangle "ESPACE-PRIVATIF" {
+  usecase "Se connecter" as UC_Login
+  usecase "Demander un lien magique" as UC_Magic
+  usecase "Consulter ses documents" as UC_List
+  usecase "Visualiser un PDF" as UC_View
+  usecase "Signer un document" as UC_Sign
+  usecase "Confirmer par OTP" as UC_Otp
+  usecase "Refuser un document" as UC_Refuse
+  usecase "Télécharger le document signé" as UC_Download
+  usecase "Recevoir notification" as UC_Notif
+  usecase "Déposer un document" as UC_Deposit
+  usecase "Recevoir signature.completed" as UC_Recv
+  usecase "Renvoyer le PDF final" as UC_Final
+  usecase "Consulter logs et files" as UC_Admin
+}
+
+Loc --> UC_Login
+Loc --> UC_Magic
+Loc --> UC_List
+Loc --> UC_View
+Loc --> UC_Sign
+Loc --> UC_Refuse
+Loc --> UC_Download
+Resp --> UC_Notif
+
+Sothis --> UC_Deposit
+Sothis --> UC_Recv
+Sothis --> UC_Final
+
+Admin --> UC_Admin
+
+UC_Sign ..> UC_Otp : <<include>>
+UC_Sign ..> UC_View : <<include>>
+UC_Login <.. UC_Magic : <<extend>>
+
+@enduml

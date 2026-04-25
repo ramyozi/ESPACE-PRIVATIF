@@ -1,0 +1,52 @@
+@startuml sequence_signature
+skinparam shadowing false
+autonumber
+
+actor Locataire
+participant "Navigateur" as UI
+participant "ESPACE-PRIVATIF\n(PHP)" as EP
+database "MySQL" as DB
+participant "MailService" as Mail
+participant "Serveur WS\n(Ratchet)" as WS
+participant "SOTHIS" as Sothis
+
+== Ouverture du document ==
+Locataire -> UI : clic sur le lien de signature
+UI -> EP : GET /documents/{id}/sign
+EP -> DB : charge le document, vérifie tenant + user
+DB --> EP : document (état en_attente_signature)
+EP -> DB : passe en signature_en_cours
+EP --> UI : page de signature (canvas + PDF.js)
+
+== Capture et envoi de la signature ==
+Locataire -> UI : signe et confirme
+UI -> EP : POST /documents/{id}/sign/start
+EP -> DB : génère OTP (hashé)
+EP -> Mail : envoie OTP
+Mail --> Locataire : mail OTP
+EP --> UI : OK, demander OTP
+
+Locataire -> UI : saisit l'OTP
+UI -> EP : POST /documents/{id}/sign/complete (image + otp)
+EP -> DB : vérifie OTP, marque consommé
+EP -> DB : enregistre la signature (PNG, sha256, ip, ua)
+EP -> DB : passe le document en "signe"
+EP -> DB : insert audit_log (sign_complete, hash chaîné)
+EP -> DB : insert ws_outbox (signature.completed)
+EP -> Mail : confirmation locataire
+EP -> Mail : notification responsable
+EP --> UI : confirmation visuelle
+
+== Transmission à SOTHIS ==
+WS -> DB : lit la file outbox
+WS -> Sothis : signature.completed (JSON)
+Sothis --> WS : ack
+WS -> DB : marque acked
+
+== Retour du PDF signé ==
+Sothis -> WS : document.finalized (URL ou base64)
+WS -> DB : stocke le PDF, passe en signe_valide
+WS -> Mail : envoie le mail final au locataire
+Mail --> Locataire : lien de téléchargement
+
+@enduml

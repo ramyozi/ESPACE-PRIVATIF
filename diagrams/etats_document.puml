@@ -1,0 +1,16 @@
+@startuml etats_document
+skinparam shadowing false
+title Machine à états du document
+
+[*] --> en_attente_signature : dépôt SOTHIS
+en_attente_signature --> signature_en_cours : ouverture par locataire
+signature_en_cours --> en_attente_signature : abandon ou OTP épuisé
+signature_en_cours --> signe : signature + OTP validés
+signature_en_cours --> refuse : refus motivé
+en_attente_signature --> expire : deadline dépassée
+signe --> signe_valide : retour SOTHIS (document.finalized)
+refuse --> [*]
+signe_valide --> [*]
+expire --> [*]
+
+@enduml

@@ -1,0 +1,45 @@
+@startuml architecture
+skinparam shadowing false
+title Architecture technique ESPACE-PRIVATIF
+
+actor "Locataire" as Loc
+actor "Responsable" as Resp
+actor "SOTHIS" as Sothis
+
+node "Navigateur" as Browser {
+  component "Twig + JS\nPDF.js + signature_pad" as Front
+}
+
+node "Serveur applicatif" as App {
+  component "Nginx" as Nginx
+  component "PHP-FPM\n(Slim 4)" as Php
+  component "Worker mail (CLI)" as MailWorker
+  component "Worker outbox (CLI)" as OutboxWorker
+}
+
+node "Serveur WebSocket" as WsNode {
+  component "Ratchet\n(bin/ws-server.php)" as Ws
+}
+
+database "MySQL 8" as DB
+
+node "Mail" as MailNode {
+  component "SMTP / API mail" as Smtp
+}
+
+Loc -down-> Browser
+Resp -down-> Smtp : reçoit mail
+Browser -right-> Nginx : HTTPS
+Nginx -down-> Php
+Php -down-> DB
+Php -down-> Smtp : envoi via worker
+Php -right-> Ws : insert outbox\n(via DB)
+OutboxWorker -down-> DB
+OutboxWorker -right-> Ws : déclenche émission
+Ws -right-> Sothis : WSS
+Sothis -left-> Ws : WSS (document.finalized)
+Ws -down-> DB : update états
+
+Sothis -up-> Php : POST /api/sothis/documents
+
+@enduml

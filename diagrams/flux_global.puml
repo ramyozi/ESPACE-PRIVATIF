@@ -1,0 +1,36 @@
+@startuml flux_global
+skinparam shadowing false
+title Flux global du système
+
+start
+:SOTHIS génère le document Word;
+:Conversion en PDF;
+:Dépôt vers ESPACE-PRIVATIF\n(POST /api/sothis/documents);
+:ESPACE-PRIVATIF persiste\n(état = en_attente_signature);
+:Mail au locataire avec lien;
+:Locataire se connecte;
+
+if (Document encore valide ?) then (oui)
+  :Locataire visualise et signe;
+  :OTP envoyé par mail;
+  if (OTP valide ?) then (oui)
+    :Signature enregistrée;
+    :État = signé;
+    :Mails locataire + responsable;
+    :Push WebSocket vers SOTHIS;
+    :SOTHIS regénère le PDF signé;
+    :SOTHIS renvoie via WebSocket;
+    :État = signé et validé;
+    :Mail final au locataire avec PDF;
+    stop
+  else (non, 3 tentatives échouées)
+    :Annulation, retour liste;
+    stop
+  endif
+else (non, expiré)
+  :État = expiré;
+  :Notification SOTHIS;
+  stop
+endif
+
+@enduml
