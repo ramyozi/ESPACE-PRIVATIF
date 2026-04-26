@@ -54,6 +54,20 @@ final class DocumentRepository
         $stmt->execute(['state' => $state->value, 'id' => $id]);
     }
 
+    /**
+     * Retrouve un document a partir de son identifiant SOTHIS (cle metier).
+     * Utile pour traiter les messages "document.finalized" recus en WebSocket.
+     */
+    public function findBySothisId(string $sothisId): ?\App\Models\Document
+    {
+        $stmt = $this->connection->pdo()->prepare(
+            'SELECT * FROM documents WHERE sothis_document_id = :sid LIMIT 1'
+        );
+        $stmt->execute(['sid' => $sothisId]);
+        $row = $stmt->fetch();
+        return $row ? \App\Models\Document::fromRow($row) : null;
+    }
+
     public function setSignedPdfPath(int $id, string $path): void
     {
         $stmt = $this->connection->pdo()->prepare(
