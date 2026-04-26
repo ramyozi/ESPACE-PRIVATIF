@@ -6,6 +6,7 @@ namespace App\Controllers;
 
 use App\Http\JsonResponse;
 use App\Repositories\UserRepository;
+use App\Security\CsrfTokenManager;
 use App\Services\AuthService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -18,7 +19,19 @@ final class AuthController
     public function __construct(
         private readonly AuthService $authService,
         private readonly UserRepository $userRepository,
+        private readonly CsrfTokenManager $csrf,
     ) {
+    }
+
+    /**
+     * Expose un token CSRF reutilisable pour les requetes mutantes
+     * (logout, sign/start, sign/complete, refuse).
+     */
+    public function csrfToken(Request $request, Response $response): Response
+    {
+        return JsonResponse::ok($response, [
+            'csrfToken' => $this->csrf->getOrCreate(),
+        ]);
     }
 
     public function login(Request $request, Response $response): Response
@@ -48,6 +61,10 @@ final class AuthController
         $_SESSION['tenant_id'] = $user->tenantId;
         $_SESSION['logged_in_at'] = time();
 
+        // On rote le token CSRF a chaque connexion pour eviter la reutilisation
+        // d'un eventuel token capture avant l'authentification.
+        $csrfToken = $this->csrf->rotate();
+
         return JsonResponse::ok($response, [
             'user' => [
                 'id' => $user->id,
@@ -56,6 +73,7 @@ final class AuthController
                 'lastName' => $user->lastName,
                 'tenantId' => $user->tenantId,
             ],
+            'csrfToken' => $csrfToken,
         ]);
     }
 

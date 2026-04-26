@@ -2,8 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Controllers\AuthController;
 use App\Controllers\SothisController;
 use App\Database\Connection;
+use App\Middleware\CsrfMiddleware;
+use App\Security\CsrfTokenManager;
 use App\Repositories\AuditLogRepository;
 use App\Repositories\DocumentRepository;
 use App\Repositories\OtpRepository;
@@ -40,6 +43,17 @@ return function (ContainerBuilder $containerBuilder): void {
         },
 
         Connection::class => fn (ContainerInterface $c) => new Connection($c->get('settings')['db']),
+
+        // Securite : gestionnaire de token CSRF en session + middleware
+        CsrfTokenManager::class => fn () => new CsrfTokenManager(),
+        CsrfMiddleware::class => fn (ContainerInterface $c) => new CsrfMiddleware($c->get(CsrfTokenManager::class)),
+
+        // Controleur Auth (besoin d'acces au CsrfTokenManager pour l'exposer)
+        AuthController::class => fn (ContainerInterface $c) => new AuthController(
+            $c->get(\App\Services\AuthService::class),
+            $c->get(\App\Repositories\UserRepository::class),
+            $c->get(CsrfTokenManager::class),
+        ),
 
         // Repositories
         UserRepository::class => fn (ContainerInterface $c) => new UserRepository($c->get(Connection::class)),
