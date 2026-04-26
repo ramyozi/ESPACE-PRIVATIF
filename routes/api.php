@@ -6,6 +6,7 @@ use App\Controllers\AuthController;
 use App\Controllers\DocumentController;
 use App\Controllers\HealthController;
 use App\Controllers\SignatureController;
+use App\Controllers\SothisController;
 use App\Middleware\AuthMiddleware;
 use Slim\App;
 
@@ -26,4 +27,7 @@ return function (App $app): void {
         $group->post('/{id:[0-9]+}/sign/complete', [SignatureController::class, 'complete']);
         $group->post('/{id:[0-9]+}/refuse', [SignatureController::class, 'refuse']);
     })->add(AuthMiddleware::class);
+
+    // Endpoints serveur a serveur SOTHIS (auth par cle API)
+    $app->post('/api/sothis/document/finalized', [SothisController::class, 'finalized']);
 };

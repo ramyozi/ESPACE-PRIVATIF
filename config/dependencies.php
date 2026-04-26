@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\SothisController;
 use App\Database\Connection;
 use App\Repositories\AuditLogRepository;
 use App\Repositories\DocumentRepository;
@@ -81,6 +82,17 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(SothisGateway::class),
             $c->get(AuditService::class),
             $c->get(LoggerInterface::class),
+        ),
+
+        // Controleur s2s SOTHIS : auth par cle API statique (.env)
+        SothisController::class => fn (ContainerInterface $c) => new SothisController(
+            $c->get(DocumentRepository::class),
+            $c->get(DocumentService::class),
+            $c->get(UserRepository::class),
+            $c->get(MailService::class),
+            $c->get(AuditService::class),
+            $c->get(LoggerInterface::class),
+            (string) ($c->get('settings')['sothis']['apiKey'] ?? ''),
         ),
 
     ]);
