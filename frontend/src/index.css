@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset leger pour le canvas signature */
+canvas {
+  touch-action: none;
+}
