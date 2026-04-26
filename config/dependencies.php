@@ -3,8 +3,12 @@
 declare(strict_types=1);
 
 use App\Database\Connection;
+use App\Repositories\AuditLogRepository;
+use App\Repositories\DocumentRepository;
 use App\Repositories\UserRepository;
+use App\Services\AuditService;
 use App\Services\AuthService;
+use App\Services\DocumentService;
 use DI\ContainerBuilder;
 use Monolog\Handler\StreamHandler;
 use Monolog\Logger;
@@ -16,7 +20,6 @@ return function (ContainerBuilder $containerBuilder): void {
 
     $containerBuilder->addDefinitions([
 
-        // Logger Monolog : un seul handler fichier pour la simplicite
         LoggerInterface::class => function (ContainerInterface $c): LoggerInterface {
             $cfg = $c->get('settings')['logger'];
             $logger = new Logger($cfg['name']);
@@ -28,16 +31,22 @@ return function (ContainerBuilder $containerBuilder): void {
             return $logger;
         },
 
-        // Connexion PDO partagee
         Connection::class => fn (ContainerInterface $c) => new Connection($c->get('settings')['db']),
 
         // Repositories
         UserRepository::class => fn (ContainerInterface $c) => new UserRepository($c->get(Connection::class)),
+        DocumentRepository::class => fn (ContainerInterface $c) => new DocumentRepository($c->get(Connection::class)),
+        AuditLogRepository::class => fn (ContainerInterface $c) => new AuditLogRepository($c->get(Connection::class)),
 
-        // Services metier
+        // Services
         AuthService::class => fn (ContainerInterface $c) => new AuthService(
             $c->get(UserRepository::class),
             $c->get(LoggerInterface::class),
+        ),
+        AuditService::class => fn (ContainerInterface $c) => new AuditService($c->get(AuditLogRepository::class)),
+        DocumentService::class => fn (ContainerInterface $c) => new DocumentService(
+            $c->get(DocumentRepository::class),
+            $c->get(AuditService::class),
         ),
 
     ]);
