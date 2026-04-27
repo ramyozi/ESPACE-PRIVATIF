@@ -1,6 +1,7 @@
 # ESPACE-PRIVATIF
 
-Module de signature electronique en PHP 8.2 / Slim 4 / MySQL 8 / Ratchet.
+Module de signature electronique. Backend PHP 8.2 / Slim 4 / MySQL 8 / Ratchet,
+frontend Vite + React. Tout tourne en Docker.
 Conception detaillee dans [docs/](docs/) et [diagrams/](diagrams/).
 
 ## Stack
@@ -10,34 +11,46 @@ Conception detaillee dans [docs/](docs/) et [diagrams/](diagrams/).
 - Ratchet (WebSocket) pour le canal SOTHIS
 - Symfony Mailer
 - PHPUnit pour les tests
-- Docker Compose
+- Vite + React + Tailwind (frontend)
+- Docker Compose (orchestration complete)
 
 ## Demarrage rapide
 
+Une seule commande lance le projet entier (backend + frontend + base + WS) :
+
 ```bash
 cp .env.example .env
-docker-compose up --build -d
+docker-compose up --build
+```
 
-# Installation des dependances PHP a l'interieur du conteneur
+A la premiere execution, le service frontend installe automatiquement les
+dependances npm. C'est plus long le premier coup, ensuite c'est instantane.
+
+Puis, dans un autre terminal, on prepare la base :
+
+```bash
+# Dependances PHP (vendor/)
 docker-compose exec app composer install
 
 # Seed des locataires de demo (mot de passe : demo1234)
 docker-compose exec app php bin/seed-users.php
 ```
 
-L'API repond sur http://localhost:8080.
-
 | Service | URL |
 |---------|-----|
+| Frontend | http://localhost:5173 |
 | API HTTP | http://localhost:8080 |
 | WebSocket | ws://localhost:8081 |
 | MySQL | localhost:3307 (user `app` / pass `app_secret`) |
 
-Verification :
+Verification rapide :
 
 ```bash
 curl http://localhost:8080/health
 ```
+
+Aucune commande `npm install` ou `npm run dev` n'est requise sur l'hote.
+Le frontend est servi par le conteneur `ep_frontend`.
 
 ## Comptes de demo
 
