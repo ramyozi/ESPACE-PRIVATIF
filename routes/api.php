@@ -36,6 +36,7 @@ return function (App $app): void {
             ->add(CsrfMiddleware::class);
     })->add(AuthMiddleware::class);
 
-    // Endpoint serveur a serveur SOTHIS : auth par cle API, pas de CSRF
+    // Endpoints serveur a serveur SOTHIS : auth par cle API, pas de CSRF
     $app->post('/api/sothis/document/finalized', [SothisController::class, 'finalized']);
+    $app->post('/api/sothis/documents', [SothisController::class, 'deposit']);
 };

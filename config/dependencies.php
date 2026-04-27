@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Controllers\AuthController;
 use App\Controllers\SothisController;
+use App\Services\SothisDepositService;
 use App\Database\Connection;
 use App\Middleware\CsrfMiddleware;
 use App\Security\CsrfTokenManager;
@@ -98,6 +99,14 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(LoggerInterface::class),
         ),
 
+        // Service de depot d'un nouveau document par SOTHIS
+        SothisDepositService::class => fn (ContainerInterface $c) => new SothisDepositService(
+            $c->get(DocumentRepository::class),
+            $c->get(UserRepository::class),
+            $c->get(AuditService::class),
+            $c->get(LoggerInterface::class),
+        ),
+
         // Controleur s2s SOTHIS : auth par cle API statique (.env)
         SothisController::class => fn (ContainerInterface $c) => new SothisController(
             $c->get(DocumentRepository::class),
@@ -106,6 +115,7 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(MailService::class),
             $c->get(AuditService::class),
             $c->get(LoggerInterface::class),
+            $c->get(SothisDepositService::class),
             (string) ($c->get('settings')['sothis']['apiKey'] ?? ''),
         ),
 
