@@ -206,6 +206,7 @@ final class SignatureServiceTest extends TestCase
                 $this->createMock(MailService::class),
                 $this->createMock(SothisGateway::class),
                 $this->createMock(AuditService::class),
+                new SignatureFileService(),
                 new NullLogger(),
             );
 
