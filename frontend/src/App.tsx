@@ -3,6 +3,7 @@ import { AuthProvider } from '@/hooks/useAuth'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { LoginPage } from '@/pages/Login'
 import { DashboardPage } from '@/pages/Dashboard'
+import { DocumentDetailPage } from '@/pages/DocumentDetail'
 
 /**
  * Racine de l'application : routeur, contexte d'authentification et pages.
@@ -18,6 +19,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <DashboardPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/documents/:id"
+            element={
+              <ProtectedRoute>
+                <DocumentDetailPage />
               </ProtectedRoute>
             }
           />
