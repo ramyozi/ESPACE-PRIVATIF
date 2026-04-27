@@ -120,6 +120,110 @@ final class SignatureServiceTest extends TestCase
         );
     }
 
+    public function testOtpDevShortcutValideLaSignatureEnModeDev(): void
+    {
+        // On force APP_ENV=dev pour activer le raccourci OTP "123456".
+        // Le bloc try/finally garantit qu'on restaure la valeur originale apres le test.
+        $previousEnv = $_ENV['APP_ENV'] ?? null;
+        $_ENV['APP_ENV'] = 'dev';
+
+        try {
+            $document = $this->buildDocument(DocumentState::SIGNATURE_EN_COURS);
+            $user = $this->buildUser();
+
+            $signatures = $this->createMock(SignatureRepository::class);
+            $signatures->expects($this->once())->method('create')->willReturn(99);
+
+            $documentService = $this->createMock(DocumentService::class);
+            $documentService->expects($this->once())->method('markSigned');
+
+            // Cle du test : en mode dev avec "123456", on ne doit PAS appeler verify()
+            $otp = $this->createMock(OtpService::class);
+            $otp->expects($this->never())->method('verify');
+
+            $sothis = $this->createMock(SothisGateway::class);
+            $sothis->expects($this->once())->method('queueSignatureCompleted');
+
+            $mail = $this->createMock(MailService::class);
+            $mail->expects($this->atLeastOnce())->method('queue');
+
+            $service = new SignatureService(
+                $signatures,
+                $this->createMock(DocumentRepository::class),
+                $documentService,
+                $otp,
+                $mail,
+                $sothis,
+                $this->createMock(AuditService::class),
+                new NullLogger(),
+            );
+
+            $result = $service->complete(
+                user: $user,
+                document: $document,
+                otp: '123456',
+                signatureBase64: $this->validPngDataUrl(),
+                ip: '127.0.0.1',
+                userAgent: 'phpunit',
+            );
+
+            self::assertSame(99, $result['signatureId']);
+            self::assertSame('signe', $result['state']);
+        } finally {
+            if ($previousEnv === null) {
+                unset($_ENV['APP_ENV']);
+            } else {
+                $_ENV['APP_ENV'] = $previousEnv;
+            }
+        }
+    }
+
+    public function testOtpDevShortcutNeFonctionnePasEnProduction(): void
+    {
+        // Test de non-regression securite : "123456" ne doit pas suffire en prod.
+        $previousEnv = $_ENV['APP_ENV'] ?? null;
+        $_ENV['APP_ENV'] = 'prod';
+
+        try {
+            $document = $this->buildDocument(DocumentState::SIGNATURE_EN_COURS);
+            $user = $this->buildUser();
+
+            // En prod, le service OTP DOIT etre interroge meme avec "123456"
+            $otp = $this->createMock(OtpService::class);
+            $otp->expects($this->once())->method('verify')
+                ->willReturn(['ok' => false, 'reason' => 'otp_invalid']);
+
+            $service = new SignatureService(
+                $this->createMock(SignatureRepository::class),
+                $this->createMock(DocumentRepository::class),
+                $this->createMock(DocumentService::class),
+                $otp,
+                $this->createMock(MailService::class),
+                $this->createMock(SothisGateway::class),
+                $this->createMock(AuditService::class),
+                new NullLogger(),
+            );
+
+            $this->expectException(RuntimeException::class);
+            $this->expectExceptionMessage('otp_invalid');
+
+            $service->complete(
+                user: $user,
+                document: $document,
+                otp: '123456',
+                signatureBase64: $this->validPngDataUrl(),
+                ip: null,
+                userAgent: null,
+            );
+        } finally {
+            if ($previousEnv === null) {
+                unset($_ENV['APP_ENV']);
+            } else {
+                $_ENV['APP_ENV'] = $previousEnv;
+            }
+        }
+    }
+
     public function testCompleteEchoueSiDocumentPasEnCoursDeSignature(): void
     {
         $document = $this->buildDocument(DocumentState::EN_ATTENTE_SIGNATURE);
@@ -147,6 +251,17 @@ final class SignatureServiceTest extends TestCase
             ip: null,
             userAgent: null,
         );
+    }
+
+    /**
+     * PNG minimal 1x1 pixel transparent, encode en base64 dans un data URL.
+     * Suffisant pour passer la verification de signature magic-bytes du service.
+     */
+    private function validPngDataUrl(): string
+    {
+        return 'data:image/png;base64,'
+            . 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlE'
+            . 'QVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
     }
 
     private function buildDocument(DocumentState $state): Document
