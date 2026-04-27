@@ -1,4 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
+import { PenLine } from 'lucide-react'
 import SignaturePadLib from 'signature_pad'
 import { cn } from '@/lib/cn'
 
@@ -14,6 +15,11 @@ export interface SignaturePadHandle {
 interface SignaturePadProps {
   className?: string
   onChange?: (isEmpty: boolean) => void
+  /**
+   * Etat "vide" controle par le parent. Permet d'afficher un placeholder
+   * tant que l'utilisateur n'a pas commence a tracer.
+   */
+  isEmpty?: boolean
 }
 
 /**
@@ -23,9 +29,10 @@ interface SignaturePadProps {
  *  - on redimensionne le canvas en fonction du DPR pour rester net en HiDPI
  *  - on expose une API imperative (toDataURL/clear/isEmpty) via une ref
  *  - on remonte un evenement onChange pour activer/desactiver le bouton de validation
+ *  - un placeholder visuel s'affiche tant que le canvas est vide
  */
 export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
-  ({ className, onChange }, ref) => {
+  ({ className, onChange, isEmpty = true }, ref) => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null)
     const padRef = useRef<SignaturePadLib | null>(null)
     const onChangeRef = useRef(onChange)
@@ -54,7 +61,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
         minWidth: 0.6,
         maxWidth: 2.2,
         penColor: '#0f172a',
-        backgroundColor: '#ffffff',
+        backgroundColor: 'rgba(0,0,0,0)',
       })
       padRef.current = pad
 
@@ -94,13 +101,28 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
     return (
       <div
         className={cn(
-          'rounded-md border border-slate-300 bg-white shadow-inner',
+          'group relative overflow-hidden rounded-lg border-2 border-dashed bg-slate-50/50 transition-colors',
+          'border-slate-300 hover:border-blue-400 focus-within:border-blue-500',
+          // Quand non-vide, on bascule sur un fond blanc et un border solide
+          !isEmpty && 'border-solid border-blue-200 bg-white',
           className,
         )}
       >
+        {/* Placeholder visuel : visible uniquement quand le canvas est vide.
+            On garde pointer-events: none pour ne pas bloquer le trace. */}
+        {isEmpty && (
+          <div
+            className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400"
+            aria-hidden
+          >
+            <PenLine className="h-6 w-6" />
+            <p className="text-xs font-medium">Tracez votre signature ici</p>
+            <p className="text-[10px]">Souris, doigt ou stylet</p>
+          </div>
+        )}
         <canvas
           ref={canvasRef}
-          className="block h-48 w-full rounded-md"
+          className="block h-52 w-full cursor-crosshair touch-none rounded-md"
           aria-label="Zone de signature"
         />
       </div>
