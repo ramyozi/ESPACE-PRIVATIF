@@ -73,11 +73,29 @@ final class SignatureService
             throw new RuntimeException('invalid_state');
         }
 
-        $check = $this->otpService->verify(
-            $user->id,
-            'signature_doc_' . $document->id,
-            $otp,
-        );
+        // On détecte si on est en environnement de développement
+        $isDev = ($_ENV['APP_ENV'] ?? 'prod') === 'dev';
+
+        // En mode dev, on accepte un OTP fixe pour faciliter les tests
+        if ($isDev && $otp === '123456') {
+            // OTP valide automatiquement en mode développement.
+            // On trace systematiquement l'utilisation de ce raccourci :
+            // si on le voit apparaitre en production, c'est qu'APP_ENV=dev a fuité.
+            $this->logger->warning('signature.dev_otp_shortcut_used', [
+                'document_id' => $document->id,
+                'user_id' => $user->id,
+            ]);
+            $check = ['ok' => true];
+        } else {
+            // En production (ou si OTP différent), on vérifie via le service OTP réel
+            $check = $this->otpService->verify(
+                $user->id,
+                'signature_doc_' . $document->id,
+                $otp,
+            );
+        }
+
+        // Si l'OTP est invalide, on bloque la signature
         if (!$check['ok']) {
             throw new RuntimeException($check['reason'] ?? 'otp_invalid');
         }

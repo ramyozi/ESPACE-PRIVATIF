@@ -12,7 +12,7 @@ RUN apk add --no-cache \
         make
 
 # Extensions PHP necessaires
-RUN docker-php-ext-install pdo pdo_mysql intl mbstring zip sockets opcache
+RUN docker-php-ext-install pdo pdo_mysql intl mbstring zip opcache
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
