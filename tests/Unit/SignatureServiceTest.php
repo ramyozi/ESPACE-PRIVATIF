@@ -13,6 +13,7 @@ use App\Services\AuditService;
 use App\Services\DocumentService;
 use App\Services\MailService;
 use App\Services\OtpService;
+use App\Services\SignatureFileService;
 use App\Services\SignatureService;
 use App\Services\SothisGateway;
 use DateTimeImmutable;
@@ -58,6 +59,7 @@ final class SignatureServiceTest extends TestCase
             $this->createMock(MailService::class),
             $this->createMock(SothisGateway::class),
             $this->createMock(AuditService::class),
+            new SignatureFileService(),
             new NullLogger(),
         );
 
@@ -80,6 +82,7 @@ final class SignatureServiceTest extends TestCase
             $this->createMock(MailService::class),
             $this->createMock(SothisGateway::class),
             $this->createMock(AuditService::class),
+            new SignatureFileService(),
             new NullLogger(),
         );
 
@@ -104,6 +107,7 @@ final class SignatureServiceTest extends TestCase
             $this->createMock(MailService::class),
             $this->createMock(SothisGateway::class),
             $this->createMock(AuditService::class),
+            new SignatureFileService(),
             new NullLogger(),
         );
 
@@ -155,6 +159,7 @@ final class SignatureServiceTest extends TestCase
                 $mail,
                 $sothis,
                 $this->createMock(AuditService::class),
+                new SignatureFileService(),
                 new NullLogger(),
             );
 
@@ -237,6 +242,7 @@ final class SignatureServiceTest extends TestCase
             $this->createMock(MailService::class),
             $this->createMock(SothisGateway::class),
             $this->createMock(AuditService::class),
+            new SignatureFileService(),
             new NullLogger(),
         );
 

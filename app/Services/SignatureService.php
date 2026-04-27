@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Repositories\DocumentRepository;
 use App\Repositories\SignatureRepository;
 use DateTimeImmutable;
+use InvalidArgumentException;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
 
@@ -18,11 +19,12 @@ use RuntimeException;
  *  1. start  -> verifie l'etat, declenche l'OTP
  *  2. complete -> valide l'OTP, persiste la signature, transitionne le document
  *  3. SothisGateway prend ensuite le relai (push WebSocket)
+ *
+ * La validation et le stockage du fichier PNG sont delegues au
+ * SignatureFileService pour respecter le SRP.
  */
 final class SignatureService
 {
-    private const SIGNATURE_DIR = __DIR__ . '/../../storage/signatures';
-
     public function __construct(
         private readonly SignatureRepository $signatures,
         private readonly DocumentRepository $documents,
@@ -31,6 +33,7 @@ final class SignatureService
         private readonly MailService $mailService,
         private readonly SothisGateway $sothisGateway,
         private readonly AuditService $audit,
+        private readonly SignatureFileService $signatureFiles,
         private readonly LoggerInterface $logger,
     ) {
     }
@@ -55,10 +58,10 @@ final class SignatureService
     }
 
     /**
-     * Termine la signature : valide l'OTP, enregistre l'image, log l'audit,
-     * notifie SOTHIS et envoie les mails.
+     * Termine la signature : valide l'OTP, valide et stocke l'image,
+     * persiste, log l'audit, notifie SOTHIS et envoie les mails.
      *
-     * @param string $signatureBase64 Image PNG en base64 (data URL ou nu)
+     * @param string $signatureBase64 Image PNG en data URL strict (data:image/png;base64,...)
      */
     public function complete(
         User $user,
@@ -73,41 +76,39 @@ final class SignatureService
             throw new RuntimeException('invalid_state');
         }
 
-        // On détecte si on est en environnement de développement
+        // Verification de l'OTP (avec raccourci dev "123456" si APP_ENV=dev)
         $isDev = ($_ENV['APP_ENV'] ?? 'prod') === 'dev';
-
-        // En mode dev, on accepte un OTP fixe pour faciliter les tests
         if ($isDev && $otp === '123456') {
-            // OTP valide automatiquement en mode développement.
-            // On trace systematiquement l'utilisation de ce raccourci :
-            // si on le voit apparaitre en production, c'est qu'APP_ENV=dev a fuité.
             $this->logger->warning('signature.dev_otp_shortcut_used', [
                 'document_id' => $document->id,
                 'user_id' => $user->id,
             ]);
             $check = ['ok' => true];
         } else {
-            // En production (ou si OTP différent), on vérifie via le service OTP réel
             $check = $this->otpService->verify(
                 $user->id,
                 'signature_doc_' . $document->id,
                 $otp,
             );
         }
-
-        // Si l'OTP est invalide, on bloque la signature
         if (!$check['ok']) {
             throw new RuntimeException($check['reason'] ?? 'otp_invalid');
         }
 
-        // On extrait le PNG depuis le data URL eventuel
-        $binary = $this->decodeSignaturePng($signatureBase64);
-        if ($binary === null) {
-            throw new RuntimeException('invalid_image');
+        // Validation et stockage du PNG via le service dedie.
+        // Toute exception est convertie en code metier explicite remontant au controleur.
+        try {
+            $binary = $this->signatureFiles->decodeAndValidate($signatureBase64);
+        } catch (InvalidArgumentException $e) {
+            $this->logger->info('signature.invalid_image', [
+                'document_id' => $document->id,
+                'reason' => $e->getMessage(),
+            ]);
+            throw new RuntimeException($e->getMessage());
         }
 
         $imageSha = hash('sha256', $binary);
-        $imagePath = $this->persistSignatureFile($user->tenantId, $document->id, $binary);
+        $imagePath = $this->signatureFiles->store($document->id, $binary);
 
         // Enregistrement DB
         $signedAt = new DateTimeImmutable('now');
@@ -143,7 +144,7 @@ final class SignatureService
             userAgent: $userAgent,
         );
 
-        // Mails
+        // Mails de confirmation
         $this->mailService->queue(
             tenantId: $user->tenantId,
             to: $user->email,
@@ -168,53 +169,19 @@ final class SignatureService
         $this->logger->info('signature.completed', [
             'document_id' => $document->id,
             'user_id' => $user->id,
+            'image_path' => $imagePath,
         ]);
 
         return [
             'signatureId' => $signatureId,
             'signedAt' => $signedAt->format(DATE_ATOM),
             'state' => DocumentState::SIGNE->value,
+            'imagePath' => $imagePath,
         ];
     }
 
     public function refuse(User $user, Document $document, ?string $reason, ?string $ip): void
     {
         $this->documentService->refuse($document, $reason, $ip);
-    }
-
-    /**
-     * Decode une image PNG depuis un data URL ou une string base64 nue.
-     */
-    private function decodeSignaturePng(string $input): ?string
-    {
-        if (preg_match('/^data:image\/png;base64,(.+)$/i', $input, $m)) {
-            $input = $m[1];
-        }
-        $binary = base64_decode($input, true);
-        if ($binary === false) {
-            return null;
-        }
-        // Verifie la signature PNG (8 octets magiques)
-        if (substr($binary, 0, 8) !== "\x89PNG\r\n\x1a\n") {
-            return null;
-        }
-        if (strlen($binary) > 200_000) {
-            // Limite raisonnable, le reste est trop gros pour une signature canvas
-            return null;
-        }
-        return $binary;
-    }
-
-    private function persistSignatureFile(int $tenantId, int $documentId, string $binary): string
-    {
-        $dir = self::SIGNATURE_DIR . '/' . $tenantId;
-        if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
-        }
-        $name = sprintf('doc-%d-%s.png', $documentId, bin2hex(random_bytes(6)));
-        $full = $dir . '/' . $name;
-        file_put_contents($full, $binary);
-        // On stocke un chemin relatif au repo, jamais expose tel quel
-        return 'storage/signatures/' . $tenantId . '/' . $name;
     }
 }

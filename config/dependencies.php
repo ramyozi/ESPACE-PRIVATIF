@@ -19,6 +19,7 @@ use App\Services\AuthService;
 use App\Services\DocumentService;
 use App\Services\MailService;
 use App\Services\OtpService;
+use App\Services\SignatureFileService;
 use App\Services\SignatureService;
 use App\Services\SothisGateway;
 use DI\ContainerBuilder;
@@ -88,6 +89,9 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(OutboxRepository::class),
             $c->get(LoggerInterface::class),
         ),
+        // Validation et stockage des images de signature (extrait de SignatureService).
+        SignatureFileService::class => fn () => new SignatureFileService(),
+
         SignatureService::class => fn (ContainerInterface $c) => new SignatureService(
             $c->get(SignatureRepository::class),
             $c->get(DocumentRepository::class),
@@ -96,6 +100,7 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(MailService::class),
             $c->get(SothisGateway::class),
             $c->get(AuditService::class),
+            $c->get(SignatureFileService::class),
             $c->get(LoggerInterface::class),
         ),
 
