@@ -46,6 +46,55 @@ final class DocumentRepository
         return $row ? Document::fromRow($row) : null;
     }
 
+    /**
+     * Insere un nouveau document depose par SOTHIS.
+     * Retourne l'id genere par MySQL.
+     *
+     * @param array{
+     *   tenant_id:int, user_id:int, residence_id:?int,
+     *   sothis_document_id:string, type:string, title:string,
+     *   pdf_path:string, pdf_sha256:string, deadline:?string
+     * } $data
+     */
+    public function create(array $data): int
+    {
+        $stmt = $this->connection->pdo()->prepare(
+            'INSERT INTO documents
+                (tenant_id, user_id, residence_id, sothis_document_id, type, title,
+                 state, pdf_path, pdf_sha256, deadline)
+             VALUES
+                (:tenant, :user, :residence, :sothis_id, :type, :title,
+                 :state, :pdf_path, :pdf_sha, :deadline)'
+        );
+        $stmt->execute([
+            'tenant' => $data['tenant_id'],
+            'user' => $data['user_id'],
+            'residence' => $data['residence_id'] ?? null,
+            'sothis_id' => $data['sothis_document_id'],
+            'type' => $data['type'],
+            'title' => $data['title'],
+            'state' => DocumentState::EN_ATTENTE_SIGNATURE->value,
+            'pdf_path' => $data['pdf_path'],
+            'pdf_sha' => $data['pdf_sha256'],
+            'deadline' => $data['deadline'] ?? null,
+        ]);
+        return (int) $this->connection->pdo()->lastInsertId();
+    }
+
+    /**
+     * Verifie si un document avec ce sothis_document_id existe deja pour le tenant.
+     * Permet d'eviter les doublons en cas de retry SOTHIS.
+     */
+    public function existsBySothisId(int $tenantId, string $sothisId): bool
+    {
+        $stmt = $this->connection->pdo()->prepare(
+            'SELECT 1 FROM documents
+             WHERE tenant_id = :tenant AND sothis_document_id = :sid LIMIT 1'
+        );
+        $stmt->execute(['tenant' => $tenantId, 'sid' => $sothisId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
     public function updateState(int $id, DocumentState $state): void
     {
         $stmt = $this->connection->pdo()->prepare(
