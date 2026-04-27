@@ -4,6 +4,7 @@ import { ProtectedRoute } from '@/components/ProtectedRoute'
 import { LoginPage } from '@/pages/Login'
 import { DashboardPage } from '@/pages/Dashboard'
 import { DocumentDetailPage } from '@/pages/DocumentDetail'
+import { SignaturePage } from '@/pages/SignaturePage'
 
 /**
  * Racine de l'application : routeur, contexte d'authentification et pages.
@@ -27,6 +28,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <DocumentDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/documents/:id/sign"
+            element={
+              <ProtectedRoute>
+                <SignaturePage />
               </ProtectedRoute>
             }
           />
