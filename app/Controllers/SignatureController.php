@@ -83,8 +83,20 @@ final class SignatureController
                 managerEmail: '', // simplifie : recupere via la residence dans une iteration future
             );
         } catch (RuntimeException $e) {
-            // Les codes metier remontent tels quels pour etre lisibles cote front
-            return JsonResponse::error($response, $e->getMessage(), 'Signature impossible', 409);
+            // On differencie les erreurs de validation (422) des conflits d'etat (409).
+            // Les codes metier sont propages tels quels pour etre lisibles cote front.
+            $code = $e->getMessage();
+            $status = match ($code) {
+                'invalid_image_format',
+                'invalid_image_encoding',
+                'invalid_image_signature',
+                'image_too_large',
+                'otp_invalid',
+                'otp_not_found' => 422,
+                'otp_locked' => 423,
+                default => 409, // invalid_state, already_signed, etc.
+            };
+            return JsonResponse::error($response, $code, 'Signature impossible', $status);
         }
 
         return JsonResponse::ok($response, $result);
