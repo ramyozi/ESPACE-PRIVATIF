@@ -1,0 +1,41 @@
+# On exclut tout ce qui n'est pas necessaire au build de l'image PHP.
+# Le Dockerfile ne fait que COPY composer.json + composer.lock,
+# donc on peut largement reduire le contexte envoye au daemon Docker.
+
+# Versionning
+.git/
+.gitignore
+.gitattributes
+
+# Dependances generees
+vendor/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+
+# Caches et logs locaux
+var/log/*
+!var/log/.gitkeep
+var/cache/
+
+# Donnees applicatives generees au runtime
+storage/pdfs/*
+!storage/pdfs/.gitkeep
+storage/signatures/*
+!storage/signatures/.gitkeep
+
+# Documentation et tests : pas necessaires au build
+docs/
+diagrams/
+tests/
+
+# Config IDE et OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Variables d'environnement locales
+.env
+.env.local
+.env.*.local

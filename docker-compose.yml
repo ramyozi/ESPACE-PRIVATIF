@@ -1,7 +1,10 @@
 services:
   app:
     build:
-      context: ./docker/php
+      # Le contexte est la racine du projet pour que le Dockerfile
+      # puisse acceder a composer.json (qui est a la racine).
+      context: .
+      dockerfile: docker/php/Dockerfile
     container_name: ep_app
     working_dir: /var/www/html
     volumes:
@@ -51,7 +54,9 @@ services:
 
   ws:
     build:
-      context: ./docker/php
+      # Meme correction que pour le service "app" : on construit depuis la racine.
+      context: .
+      dockerfile: docker/php/Dockerfile
     container_name: ep_ws
     working_dir: /var/www/html
     command: php bin/ws-server.php
