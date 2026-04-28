@@ -15,6 +15,8 @@ return [
             'secret' => $_ENV['APP_SECRET'] ?? 'change-me',
         ],
         'db' => [
+            // mysql en local (Docker Compose), pgsql en cloud (Supabase)
+            'driver' => $_ENV['DB_DRIVER'] ?? 'mysql',
             'host' => $_ENV['DB_HOST'] ?? 'db',
             'port' => (int) ($_ENV['DB_PORT'] ?? 3306),
             'name' => $_ENV['DB_NAME'] ?? 'espace_privatif',
