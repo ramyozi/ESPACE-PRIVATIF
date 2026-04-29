@@ -61,10 +61,10 @@ final class DocumentRepository
         $stmt = $this->connection->pdo()->prepare(
             'INSERT INTO documents
                 (tenant_id, user_id, residence_id, sothis_document_id, type, title,
-                 state, pdf_path, pdf_sha256, deadline)
+                 state, pdf_path, pdf_sha256, deadline, created_by)
              VALUES
                 (:tenant, :user, :residence, :sothis_id, :type, :title,
-                 :state, :pdf_path, :pdf_sha, :deadline)'
+                 :state, :pdf_path, :pdf_sha, :deadline, :created_by)'
         );
         $stmt->execute([
             'tenant' => $data['tenant_id'],
@@ -77,6 +77,7 @@ final class DocumentRepository
             'pdf_path' => $data['pdf_path'],
             'pdf_sha' => $data['pdf_sha256'],
             'deadline' => $data['deadline'] ?? null,
+            'created_by' => $data['created_by'] ?? null,
         ]);
         return (int) $this->connection->pdo()->lastInsertId();
     }

@@ -46,8 +46,18 @@ return function (App $app): void {
     $app->post('/api/sothis/document/finalized', [SothisController::class, 'finalized']);
     $app->post('/api/sothis/documents', [SothisController::class, 'deposit']);
 
-    // Espace admin : auth + role admin + CSRF (route mutante)
+    // Espace admin : auth + role admin (CSRF sur les routes mutantes uniquement)
+    $app->get('/api/admin/users', [AdminController::class, 'listUsers'])
+        ->add(AdminMiddleware::class)
+        ->add(AuthMiddleware::class);
+
     $app->post('/api/admin/documents', [AdminController::class, 'createDocument'])
+        ->add(CsrfMiddleware::class)
+        ->add(AdminMiddleware::class)
+        ->add(AuthMiddleware::class);
+
+    // Upload PDF + creation document en une etape (multipart/form-data)
+    $app->post('/api/admin/documents/upload', [AdminController::class, 'uploadDocument'])
         ->add(CsrfMiddleware::class)
         ->add(AdminMiddleware::class)
         ->add(AuthMiddleware::class);

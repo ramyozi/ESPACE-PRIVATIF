@@ -6,6 +6,7 @@ import { DashboardPage } from '@/pages/Dashboard'
 import { DocumentDetailPage } from '@/pages/DocumentDetail'
 import { SignaturePage } from '@/pages/SignaturePage'
 import { ProfilePage } from '@/pages/Profile'
+import { AdminDocumentsPage } from '@/pages/AdminDocuments'
 
 /**
  * Racine de l'application : routeur, contexte d'authentification et pages.
@@ -45,6 +46,14 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/documents"
+            element={
+              <ProtectedRoute>
+                <AdminDocumentsPage />
               </ProtectedRoute>
             }
           />

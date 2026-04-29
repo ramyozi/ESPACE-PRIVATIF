@@ -39,6 +39,9 @@ final class SothisDepositService
         int $userId,
         string $documentName,
         string $pdfUrl,
+        ?string $type = null,
+        ?\DateTimeImmutable $deadline = null,
+        ?int $createdBy = null,
     ): int {
         // 1. Verifie que l'utilisateur cible appartient bien au tenant declare.
         //    Cela couvre a la fois "tenant inconnu" et "user pas dans ce tenant".
@@ -66,11 +69,12 @@ final class SothisDepositService
             'user_id' => $userId,
             'residence_id' => $user->residenceId,
             'sothis_document_id' => $sothisDocumentId,
-            'type' => 'document',
+            'type' => $type !== null && $type !== '' ? $type : 'document',
             'title' => $documentName,
             'pdf_path' => $pdfUrl,
             'pdf_sha256' => $urlHash,
-            'deadline' => null,
+            'deadline' => $deadline?->format('Y-m-d H:i:s'),
+            'created_by' => $createdBy,
         ]);
 
         // 5. Audit : evenement immuable, lie au tenant et a l'utilisateur cible.

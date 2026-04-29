@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Controllers\AdminController;
 use App\Controllers\AuthController;
 use App\Controllers\SothisController;
+use App\Services\PdfStorageService;
 use App\Services\SothisDepositService;
 use App\Database\Connection;
 use App\Middleware\CorsMiddleware;
@@ -111,9 +112,15 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(LoggerInterface::class),
         ),
 
-        // Controleur admin : reutilise le service de depot SOTHIS
+        // Stockage local des PDF deposes par l'admin (pourra basculer S3 plus tard)
+        PdfStorageService::class => fn () => new PdfStorageService(),
+
+        // Controleur admin : reutilise le service de depot SOTHIS + storage PDF
         AdminController::class => fn (ContainerInterface $c) => new AdminController(
             $c->get(SothisDepositService::class),
+            $c->get(PdfStorageService::class),
+            $c->get(\App\Repositories\UserRepository::class),
+            $c->get(\Psr\Log\LoggerInterface::class),
         ),
 
         // Service de depot d'un nouveau document par SOTHIS

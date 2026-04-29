@@ -169,6 +169,50 @@ async function fetchCsrfToken(): Promise<string> {
   return data.csrfToken
 }
 
+/**
+ * Variante de request() pour les uploads multipart/form-data.
+ * On ne pose PAS le Content-Type : le navigateur le calcule avec le boundary.
+ */
+async function requestForm<T>(path: string, form: FormData): Promise<T> {
+  const headers: Record<string, string> = {}
+  if (!csrfToken) {
+    try {
+      csrfToken = await fetchCsrfToken()
+    } catch {
+      // sera rejete en 403 cote backend si absent
+    }
+  }
+  if (csrfToken) {
+    headers['X-CSRF-Token'] = csrfToken
+  }
+
+  let response: Response
+  try {
+    response = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      credentials: 'include',
+      headers,
+      body: form,
+    })
+  } catch {
+    throw new ApiError('network_error', 0, 'Impossible de contacter le serveur')
+  }
+
+  if (response.status === 204) return undefined as T
+
+  let json: ApiResponse<T>
+  try {
+    json = (await response.json()) as ApiResponse<T>
+  } catch {
+    throw new ApiError('invalid_response', response.status, 'Reponse serveur invalide')
+  }
+  if (json.status === 'error') {
+    const code = json.error?.code ?? 'unknown_error'
+    throw new ApiError(code, response.status, humanize(code, json.error?.message ?? 'Erreur inattendue'))
+  }
+  return json.data
+}
+
 // ----------------------------------------------------------------
 // Endpoints metier exposes au reste de l'application
 // ----------------------------------------------------------------
@@ -179,6 +223,7 @@ export interface Me {
   firstName: string | null
   lastName: string | null
   tenantId: number
+  role?: string
 }
 
 export interface DocumentItem {
@@ -263,5 +308,39 @@ export const api = {
       method: 'POST',
       body: { reason },
     })
+  },
+
+  // ---------- Admin ----------
+
+  async adminListUsers(): Promise<
+    { id: number; email: string; firstName: string | null; lastName: string | null }[]
+  > {
+    const data = await request<{
+      items: { id: number; email: string; firstName: string | null; lastName: string | null }[]
+    }>('/admin/users')
+    return data.items
+  },
+
+  /**
+   * Cree un document admin avec upload de PDF.
+   * Le tenant est deduit cote backend de l'admin connecte (jamais du body).
+   */
+  async adminUploadDocument(payload: {
+    file: File
+    userId: number
+    documentName: string
+    type?: string
+    deadline?: string // ISO 8601
+  }): Promise<{ documentId: number; state: string }> {
+    const form = new FormData()
+    form.append('file', payload.file)
+    form.append('user_id', String(payload.userId))
+    form.append('document_name', payload.documentName)
+    if (payload.type) form.append('type', payload.type)
+    if (payload.deadline) form.append('deadline', payload.deadline)
+    return requestForm<{ documentId: number; state: string }>(
+      '/admin/documents/upload',
+      form,
+    )
   },
 }

@@ -5,6 +5,7 @@ import path from 'node:path'
 // On proxifie /api et /health vers le backend Slim afin de partager la
 // meme origine (cookies de session) et eviter la configuration CORS.
 export default defineConfig({
+  base: '/',
   plugins: [react()],
   resolve: {
     alias: {
