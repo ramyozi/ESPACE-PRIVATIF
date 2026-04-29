@@ -47,6 +47,24 @@ final class UserRepository
         return $row ? User::fromRow($row) : null;
     }
 
+    /**
+     * Liste les locataires (role='user') du tenant. Sert au formulaire admin
+     * pour selectionner le destinataire d'un document.
+     *
+     * @return User[]
+     */
+    public function listTenantsUsers(int $tenantId): array
+    {
+        $stmt = $this->connection->pdo()->prepare(
+            "SELECT * FROM users
+             WHERE tenant_id = :tenant AND role = 'user'
+             ORDER BY last_name, first_name, email"
+        );
+        $stmt->execute(['tenant' => $tenantId]);
+        $rows = $stmt->fetchAll();
+        return array_map(static fn (array $r) => User::fromRow($r), $rows);
+    }
+
     public function incrementFailedLogins(int $id): void
     {
         $stmt = $this->connection->pdo()->prepare(
