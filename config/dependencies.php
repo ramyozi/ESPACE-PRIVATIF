@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Controllers\AdminController;
 use App\Controllers\AuthController;
 use App\Controllers\SothisController;
 use App\Services\SothisDepositService;
 use App\Database\Connection;
+use App\Middleware\CorsMiddleware;
 use App\Middleware\CsrfMiddleware;
 use App\Security\CsrfTokenManager;
 use App\Repositories\AuditLogRepository;
@@ -49,6 +51,11 @@ return function (ContainerBuilder $containerBuilder): void {
         // Securite : gestionnaire de token CSRF en session + middleware
         CsrfTokenManager::class => fn () => new CsrfTokenManager(),
         CsrfMiddleware::class => fn (ContainerInterface $c) => new CsrfMiddleware($c->get(CsrfTokenManager::class)),
+
+        // CORS : lit la liste blanche depuis CORS_ALLOWED_ORIGINS (.env)
+        CorsMiddleware::class => fn (ContainerInterface $c) => new CorsMiddleware(
+            (string) ($c->get('settings')['app']['corsAllowedOrigins'] ?? ''),
+        ),
 
         // Controleur Auth (besoin d'acces au CsrfTokenManager pour l'exposer)
         AuthController::class => fn (ContainerInterface $c) => new AuthController(
@@ -102,6 +109,11 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(AuditService::class),
             $c->get(SignatureFileService::class),
             $c->get(LoggerInterface::class),
+        ),
+
+        // Controleur admin : reutilise le service de depot SOTHIS
+        AdminController::class => fn (ContainerInterface $c) => new AdminController(
+            $c->get(SothisDepositService::class),
         ),
 
         // Service de depot d'un nouveau document par SOTHIS

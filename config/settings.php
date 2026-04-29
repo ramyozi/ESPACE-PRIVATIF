@@ -13,8 +13,13 @@ return [
             'debug' => filter_var($_ENV['APP_DEBUG'] ?? 'false', FILTER_VALIDATE_BOOLEAN),
             'url' => $_ENV['APP_URL'] ?? 'http://localhost:8080',
             'secret' => $_ENV['APP_SECRET'] ?? 'change-me',
+            // Liste blanche d'origines autorisees pour CORS (separees par virgule).
+            // Vide = pas de header CORS (mode local meme origine).
+            'corsAllowedOrigins' => $_ENV['CORS_ALLOWED_ORIGINS'] ?? '',
         ],
         'db' => [
+            // mysql en local (Docker Compose), pgsql en cloud (Supabase)
+            'driver' => $_ENV['DB_DRIVER'] ?? 'mysql',
             'host' => $_ENV['DB_HOST'] ?? 'db',
             'port' => (int) ($_ENV['DB_PORT'] ?? 3306),
             'name' => $_ENV['DB_NAME'] ?? 'espace_privatif',

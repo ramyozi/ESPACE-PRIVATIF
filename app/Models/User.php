@@ -12,6 +12,9 @@ use DateTimeImmutable;
  */
 final class User
 {
+    public const ROLE_ADMIN = 'admin';
+    public const ROLE_USER = 'user';
+
     public function __construct(
         public readonly int $id,
         public readonly int $tenantId,
@@ -23,6 +26,7 @@ final class User
         public readonly ?string $passwordHash,
         public readonly int $failedLogins,
         public readonly ?DateTimeImmutable $lockedUntil,
+        public readonly string $role = self::ROLE_USER,
     ) {
     }
 
@@ -39,12 +43,18 @@ final class User
             passwordHash: $row['password_hash'] ?? null,
             failedLogins: (int) ($row['failed_logins'] ?? 0),
             lockedUntil: !empty($row['locked_until']) ? new DateTimeImmutable($row['locked_until']) : null,
+            role: (string) ($row['role'] ?? self::ROLE_USER),
         );
     }
 
     public function isLocked(): bool
     {
         return $this->lockedUntil !== null && $this->lockedUntil > new DateTimeImmutable('now');
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === self::ROLE_ADMIN;
     }
 
     public function fullName(): string

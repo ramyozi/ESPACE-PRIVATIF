@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
+use App\Controllers\AdminController;
 use App\Controllers\AuthController;
 use App\Controllers\DocumentController;
 use App\Controllers\HealthController;
 use App\Controllers\SignatureController;
 use App\Controllers\SothisController;
+use App\Middleware\AdminMiddleware;
 use App\Middleware\AuthMiddleware;
 use App\Middleware\CsrfMiddleware;
 use Slim\App;
@@ -39,4 +41,10 @@ return function (App $app): void {
     // Endpoints serveur a serveur SOTHIS : auth par cle API, pas de CSRF
     $app->post('/api/sothis/document/finalized', [SothisController::class, 'finalized']);
     $app->post('/api/sothis/documents', [SothisController::class, 'deposit']);
+
+    // Espace admin : auth + role admin + CSRF (route mutante)
+    $app->post('/api/admin/documents', [AdminController::class, 'createDocument'])
+        ->add(CsrfMiddleware::class)
+        ->add(AdminMiddleware::class)
+        ->add(AuthMiddleware::class);
 };
