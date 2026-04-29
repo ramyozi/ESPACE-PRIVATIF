@@ -34,3 +34,13 @@ if (is_array($systemEnv)) {
         }
     }
 }
+
+// En production, on coupe tout affichage PHP cote reponse HTTP : sinon un
+// simple notice ou warning casse le content-type JSON et empeche le
+// navigateur de parser la reponse cross-origin (et provoque parfois un
+// "headers already sent"). On garde quand meme la trace en log serveur.
+$isProd = ($_ENV['APP_ENV'] ?? 'prod') !== 'dev';
+ini_set('display_errors', $isProd ? '0' : '1');
+ini_set('display_startup_errors', $isProd ? '0' : '1');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);

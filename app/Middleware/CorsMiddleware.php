@@ -32,15 +32,17 @@ final class CorsMiddleware implements MiddlewareInterface
     public function __construct(string $allowedOriginsCsv)
     {
         // Parse la liste : "https://a.com,https://b.com" -> [...]
+        // On retire un eventuel slash final pour que la comparaison avec
+        // l'en-tete Origin (qui n'en a jamais) reussisse.
         $this->allowedOrigins = array_values(array_filter(array_map(
-            'trim',
+            static fn (string $o): string => rtrim(trim($o), '/'),
             explode(',', $allowedOriginsCsv),
         )));
     }
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $origin = $request->getHeaderLine('Origin');
+        $origin = rtrim($request->getHeaderLine('Origin'), '/');
         $isPreflight = strtoupper($request->getMethod()) === 'OPTIONS';
 
         // Si aucune origine autorisee n'est configuree, on ne fait rien.
@@ -56,10 +58,15 @@ final class CorsMiddleware implements MiddlewareInterface
         // Pour le pre-vol, on repond directement sans laisser passer la requete
         // au handler (sinon on declenche inutilement la logique d'auth).
         if ($isPreflight) {
+            // On repond TOUJOURS le preflight ici pour eviter qu'il atteigne
+            // le routing (qui n'a pas de route OPTIONS et renverrait 405).
             $response = (new ResponseFactory())->createResponse(204);
             return $this->withCorsHeaders($response, $origin, $isAllowed, true);
         }
 
+        // Pour les requetes mutantes ou GET, on laisse passer puis on habille
+        // la reponse. Si une exception fuit, l'ErrorMiddleware (interne)
+        // fabrique deja la reponse JSON, et on lui ajoute les headers ici.
         $response = $handler->handle($request);
         return $this->withCorsHeaders($response, $origin, $isAllowed, false);
     }

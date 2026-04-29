@@ -11,8 +11,16 @@
 //  - en local : "/api" (proxifie par Vite vers le backend)
 //  - en cloud : "https://<api>.onrender.com/api" via VITE_API_BASE_URL
 //
-// On retire le slash final si present pour eviter le "//api" en concat.
-const RAW_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+// On retire un eventuel "/" final ET un "/api" final pour eviter le double
+// suffixe si l'admin a defini par erreur VITE_API_BASE_URL=https://x/api.
+function normalizeBase(raw: string): string {
+  let base = raw.replace(/\/+$/, '')
+  if (base.toLowerCase().endsWith('/api')) {
+    base = base.slice(0, -4)
+  }
+  return base
+}
+const RAW_BASE = normalizeBase((import.meta.env.VITE_API_BASE_URL ?? '') as string)
 const API_BASE = `${RAW_BASE}/api`
 
 /**
