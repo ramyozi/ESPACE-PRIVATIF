@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Controllers\AdminController;
 use App\Controllers\AuthController;
 use App\Controllers\SothisController;
 use App\Services\SothisDepositService;
@@ -108,6 +109,11 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(AuditService::class),
             $c->get(SignatureFileService::class),
             $c->get(LoggerInterface::class),
+        ),
+
+        // Controleur admin : reutilise le service de depot SOTHIS
+        AdminController::class => fn (ContainerInterface $c) => new AdminController(
+            $c->get(SothisDepositService::class),
         ),
 
         // Service de depot d'un nouveau document par SOTHIS
