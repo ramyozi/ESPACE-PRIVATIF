@@ -70,4 +70,47 @@ final class UserRepository
         );
         $stmt->execute(['id' => $id, 'until' => $until->format('Y-m-d H:i:s')]);
     }
+
+    /**
+     * Verifie si un email est deja utilise dans le tenant donne par un AUTRE
+     * utilisateur que celui specifie. Sert a detecter les doublons lors d'un
+     * changement d'email.
+     */
+    public function emailTakenByOther(int $tenantId, string $email, int $excludeUserId): bool
+    {
+        $stmt = $this->connection->pdo()->prepare(
+            'SELECT 1 FROM users
+             WHERE tenant_id = :tenant AND email = :email AND id <> :id
+             LIMIT 1'
+        );
+        $stmt->execute(['tenant' => $tenantId, 'email' => $email, 'id' => $excludeUserId]);
+        return (bool) $stmt->fetchColumn();
+    }
+
+    /**
+     * Met a jour l'email et/ou le hash du mot de passe d'un utilisateur.
+     * On accepte des valeurs nulles pour ne pas modifier un champ donne.
+     */
+    public function updateProfile(int $id, ?string $email = null, ?string $passwordHash = null): void
+    {
+        $sets = [];
+        $params = ['id' => $id];
+
+        if ($email !== null) {
+            $sets[] = 'email = :email';
+            $params['email'] = $email;
+        }
+        if ($passwordHash !== null) {
+            $sets[] = 'password_hash = :pwd';
+            $params['pwd'] = $passwordHash;
+        }
+        if ($sets === []) {
+            return;
+        }
+
+        $stmt = $this->connection->pdo()->prepare(
+            'UPDATE users SET ' . implode(', ', $sets) . ' WHERE id = :id'
+        );
+        $stmt->execute($params);
+    }
 }

@@ -25,6 +25,10 @@ return function (App $app): void {
     $app->post('/api/auth/logout', [AuthController::class, 'logout'])->add(CsrfMiddleware::class);
     $app->get('/api/auth/me', [AuthController::class, 'me'])->add(AuthMiddleware::class);
     $app->get('/api/auth/csrf-token', [AuthController::class, 'csrfToken']);
+    // Mise a jour profil (email + mot de passe) : auth + CSRF requis
+    $app->post('/api/auth/profile', [AuthController::class, 'updateProfile'])
+        ->add(CsrfMiddleware::class)
+        ->add(AuthMiddleware::class);
 
     // Documents : lecture sans CSRF (GET), routes mutantes protegees par CsrfMiddleware
     $app->group('/api/documents', function ($group): void {

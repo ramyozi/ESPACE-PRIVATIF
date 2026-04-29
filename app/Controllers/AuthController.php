@@ -104,4 +104,84 @@ final class AuthController
             ],
         ]);
     }
+
+    /**
+     * Mise a jour du profil de l'utilisateur connecte.
+     *
+     * Body JSON :
+     *   {
+     *     "currentPassword": "...",   // requis pour valider l'identite
+     *     "email": "new@example.com", // optionnel
+     *     "newPassword": "..."        // optionnel (min 8 caracteres)
+     *   }
+     *
+     * Le mot de passe courant est exige pour toute modification, meme un
+     * simple changement d'email. Sur changement d'email, on verifie qu'il
+     * n'est pas deja pris dans le tenant.
+     */
+    public function updateProfile(Request $request, Response $response): Response
+    {
+        /** @var \App\Models\User|null $user */
+        $user = $request->getAttribute('user');
+        if ($user === null) {
+            return JsonResponse::error($response, 'auth_required', 'Authentification requise', 401);
+        }
+
+        $body = (array) ($request->getParsedBody() ?? []);
+        $currentPassword = (string) ($body['currentPassword'] ?? '');
+        $newEmailRaw = $body['email'] ?? null;
+        $newPasswordRaw = $body['newPassword'] ?? null;
+
+        if ($currentPassword === '') {
+            return JsonResponse::error($response, 'invalid_input', 'Mot de passe actuel requis', 422);
+        }
+
+        // Validation identite
+        if ($user->passwordHash === null || !password_verify($currentPassword, $user->passwordHash)) {
+            return JsonResponse::error($response, 'invalid_credentials', 'Mot de passe actuel incorrect', 401);
+        }
+
+        $emailToSet = null;
+        if (is_string($newEmailRaw) && trim($newEmailRaw) !== '') {
+            $email = strtolower(trim($newEmailRaw));
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return JsonResponse::error($response, 'invalid_input', 'Email invalide', 422);
+            }
+            if ($email !== strtolower($user->email)) {
+                if ($this->userRepository->emailTakenByOther($user->tenantId, $email, $user->id)) {
+                    return JsonResponse::error($response, 'email_taken', 'Cet email est deja utilise', 409);
+                }
+                $emailToSet = $email;
+            }
+        }
+
+        $passwordToSet = null;
+        if (is_string($newPasswordRaw) && $newPasswordRaw !== '') {
+            if (strlen($newPasswordRaw) < 8) {
+                return JsonResponse::error($response, 'invalid_input', 'Mot de passe trop court (8 caracteres min)', 422);
+            }
+            $passwordToSet = password_hash($newPasswordRaw, PASSWORD_BCRYPT, ['cost' => 12]);
+        }
+
+        if ($emailToSet === null && $passwordToSet === null) {
+            return JsonResponse::error($response, 'invalid_input', 'Aucune modification fournie', 422);
+        }
+
+        $this->userRepository->updateProfile($user->id, $emailToSet, $passwordToSet);
+
+        // Si l'email a change, on rafraichit aussi la session pour rester coherent.
+        return JsonResponse::ok($response, [
+            'user' => [
+                'id' => $user->id,
+                'email' => $emailToSet ?? $user->email,
+                'firstName' => $user->firstName,
+                'lastName' => $user->lastName,
+                'tenantId' => $user->tenantId,
+            ],
+            'updated' => [
+                'email' => $emailToSet !== null,
+                'password' => $passwordToSet !== null,
+            ],
+        ]);
+    }
 }

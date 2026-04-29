@@ -212,6 +212,21 @@ export const api = {
     return data.user
   },
 
+  /**
+   * Met a jour l'email et/ou le mot de passe de l'utilisateur connecte.
+   * Le mot de passe actuel est obligatoire pour valider l'identite.
+   */
+  async updateProfile(payload: {
+    currentPassword: string
+    email?: string
+    newPassword?: string
+  }): Promise<{ user: Me; updated: { email: boolean; password: boolean } }> {
+    return request<{ user: Me; updated: { email: boolean; password: boolean } }>(
+      '/auth/profile',
+      { method: 'POST', body: payload },
+    )
+  },
+
   async listDocuments(): Promise<DocumentItem[]> {
     const data = await request<{ items: DocumentItem[]; count: number }>('/documents')
     return data.items

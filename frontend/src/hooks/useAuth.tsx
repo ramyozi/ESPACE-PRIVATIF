@@ -14,6 +14,8 @@ interface AuthState {
   initializing: boolean
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
+  /** Recharge l'utilisateur depuis /auth/me (utile apres update profil). */
+  refresh: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
@@ -63,9 +65,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const refresh = useCallback(async () => {
+    try {
+      const me = await api.me()
+      setUser(me)
+    } catch {
+      // Si le rafraichissement echoue, on laisse l'etat tel quel.
+    }
+  }, [])
+
   const value = useMemo<AuthState>(
-    () => ({ user, initializing, login, logout }),
-    [user, initializing, login, logout],
+    () => ({ user, initializing, login, logout, refresh }),
+    [user, initializing, login, logout, refresh],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
