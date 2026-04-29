@@ -25,6 +25,8 @@ return [
             'name' => $_ENV['DB_NAME'] ?? 'espace_privatif',
             'user' => $_ENV['DB_USER'] ?? 'app',
             'password' => $_ENV['DB_PASSWORD'] ?? '',
+            // SSL pour PG cloud (Supabase). Valeurs typiques : require, prefer, disable.
+            'sslmode' => $_ENV['DB_SSLMODE'] ?? 'require',
         ],
         'mail' => [
             'dsn' => $_ENV['MAIL_DSN'] ?? 'null://null',

@@ -21,9 +21,7 @@ declare(strict_types=1);
 use App\Database\Connection;
 
 require __DIR__ . '/../vendor/autoload.php';
-
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->safeLoad();
+require __DIR__ . '/../config/bootstrap-env.php';
 
 $dbConfig = [
     'driver' => $_ENV['DB_DRIVER'] ?? 'mysql',

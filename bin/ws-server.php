@@ -36,9 +36,7 @@ use Ratchet\WebSocket\WsServer;
 use React\EventLoop\Loop;
 
 require __DIR__ . '/../vendor/autoload.php';
-
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->safeLoad();
+require __DIR__ . '/../config/bootstrap-env.php';
 
 $logger = new Logger('ws');
 $logger->pushHandler(new StreamHandler(__DIR__ . '/../var/log/ws.log', 'info'));

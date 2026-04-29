@@ -44,11 +44,15 @@ final class Connection
         // chaque driver a sa propre syntaxe de DSN documentee par PHP.
         switch ($driver) {
             case 'pgsql':
+                // Supabase et la plupart des PG cloud exigent TLS. On laisse
+                // configurable via DB_SSLMODE (defaut "require" sur pgsql).
+                $sslMode = $this->config['sslmode'] ?? 'require';
                 $dsn = sprintf(
-                    'pgsql:host=%s;port=%d;dbname=%s',
+                    'pgsql:host=%s;port=%d;dbname=%s;sslmode=%s',
                     $this->config['host'],
                     $this->config['port'],
                     $this->config['name'],
+                    $sslMode,
                 );
                 $options = [
                     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

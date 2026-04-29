@@ -7,9 +7,8 @@ use Slim\Factory\AppFactory;
 
 require __DIR__ . '/../vendor/autoload.php';
 
-// Chargement des variables d'environnement
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->safeLoad();
+// Chargement uniforme des variables d'environnement (local + cloud)
+require __DIR__ . '/../config/bootstrap-env.php';
 
 // Construction du container DI
 $containerBuilder = new ContainerBuilder();

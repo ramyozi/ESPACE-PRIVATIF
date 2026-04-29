@@ -20,9 +20,7 @@ use Symfony\Component\Mailer\Transport;
 use Symfony\Component\Mime\Email;
 
 require __DIR__ . '/../vendor/autoload.php';
-
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->safeLoad();
+require __DIR__ . '/../config/bootstrap-env.php';
 
 $dbConfig = [
     'host' => $_ENV['DB_HOST'] ?? 'db',
