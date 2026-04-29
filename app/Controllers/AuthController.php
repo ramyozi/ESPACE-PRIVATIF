@@ -72,6 +72,7 @@ final class AuthController
                 'firstName' => $user->firstName,
                 'lastName' => $user->lastName,
                 'tenantId' => $user->tenantId,
+                'role' => $user->role,
             ],
             'csrfToken' => $csrfToken,
         ]);
@@ -101,6 +102,7 @@ final class AuthController
                 'firstName' => $user->firstName,
                 'lastName' => $user->lastName,
                 'tenantId' => $user->tenantId,
+                'role' => $user->role,
             ],
         ]);
     }
@@ -177,6 +179,7 @@ final class AuthController
                 'firstName' => $user->firstName,
                 'lastName' => $user->lastName,
                 'tenantId' => $user->tenantId,
+                'role' => $user->role,
             ],
             'updated' => [
                 'email' => $emailToSet !== null,
