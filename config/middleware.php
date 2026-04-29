@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Middleware\CorsMiddleware;
 use App\Middleware\JsonBodyParserMiddleware;
 use App\Middleware\SecurityHeadersMiddleware;
 use App\Middleware\SessionMiddleware;
@@ -16,6 +17,10 @@ return function (App $app): void {
 
     // Headers de securite communs
     $app->add(SecurityHeadersMiddleware::class);
+
+    // CORS : ajoute en avant-dernier pour traiter le pre-vol OPTIONS
+    // avant que le routing ne le rejette.
+    $app->add(CorsMiddleware::class);
 
     // Routing standard Slim (doit etre ajoute en dernier pour s'executer en premier)
     $app->addRoutingMiddleware();
