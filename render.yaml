@@ -1,0 +1,55 @@
+# Blueprint Render pour ESPACE-PRIVATIF.
+#
+# On declare deux services PHP independants :
+#  - api : serveur HTTP Slim (entry point public/index.php)
+#  - ws  : serveur WebSocket Ratchet (bin/ws-server.php)
+#
+# Les deux partagent le meme code source mais sont scallables
+# independamment et n'ont pas besoin de Nginx en cloud (PHP built-in
+# server suffit largement pour cette V1, derriere le proxy Render).
+#
+# La base de donnees est externalisee sur Supabase (PostgreSQL),
+# elle n'est pas declaree ici.
+
+services:
+  - type: web
+    name: espace-privatif-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./docker/render/api.Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: APP_DEBUG
+        value: "false"
+      # Les variables ci-dessous sont a renseigner dans le dashboard Render :
+      #   APP_URL                  : URL publique du service api
+      #   APP_SECRET               : secret applicatif aleatoire
+      #   DB_DRIVER                : pgsql
+      #   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD  : credentials Supabase
+      #   MAIL_DSN                 : SMTP reel (Mailgun, Resend, Postmark...)
+      #   MAIL_FROM, MAIL_FROM_NAME
+      #   CORS_ALLOWED_ORIGINS     : domaine du frontend Vercel
+      #   SOTHIS_API_KEY           : cle partagee SOTHIS
+      #   WS_TOKEN_SECRET          : secret partage avec le service ws
+
+  - type: web
+    name: espace-privatif-ws
+    runtime: docker
+    plan: free
+    dockerfilePath: ./docker/render/ws.Dockerfile
+    dockerContext: .
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: prod
+      - key: WS_HOST
+        value: 0.0.0.0
+      # Render injecte automatiquement PORT, le service WS doit ecouter dessus.
+      # Variables a renseigner manuellement dans le dashboard :
+      #   DB_DRIVER                : pgsql
+      #   DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+      #   WS_TOKEN_SECRET          : meme valeur que cote api
