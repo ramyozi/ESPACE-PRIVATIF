@@ -5,11 +5,11 @@
 -- ============================================================
 
 INSERT INTO tenants (id, code, name, sothis_api_key_hash, active)
-VALUES (1, 'T-001', 'Agence Demo', encode(digest('sothis-shared-key-dev', 'sha256'), 'hex'), 1)
+VALUES (1, 'REALSOFT', 'Realsoft Immobilier', encode(digest('sothis-shared-key-dev', 'sha256'), 'hex'), 1)
 ON CONFLICT (code) DO NOTHING;
 
 INSERT INTO residences (id, tenant_id, name, manager_email)
-VALUES (1, 1, 'Residence des Lilas', 'manager+lilas@example.test')
+VALUES (1, 1, 'Residence Les Lilas - Lyon 7', 'gestion.lilas@realsoft.fr')
 ON CONFLICT DO NOTHING;
 
 -- Aligne les sequences sur les ids inseres manuellement.
