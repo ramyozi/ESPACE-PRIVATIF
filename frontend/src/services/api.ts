@@ -7,7 +7,21 @@
  * - inclut systematiquement les cookies de session (credentials: 'include')
  */
 
-const API_BASE = '/api'
+// Base URL de l'API.
+//  - en local : "/api" (proxifie par Vite vers le backend)
+//  - en cloud : "https://<api>.onrender.com/api" via VITE_API_BASE_URL
+//
+// On retire le slash final si present pour eviter le "//api" en concat.
+const RAW_BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
+const API_BASE = `${RAW_BASE}/api`
+
+/**
+ * URL publique du serveur WebSocket Ratchet, exposee pour le client WS.
+ *  - en local : "ws://localhost:8081" (defaut)
+ *  - en cloud : VITE_WS_URL = wss://<service-ws>.onrender.com
+ */
+export const WS_URL: string =
+  (import.meta.env.VITE_WS_URL as string | undefined) ?? 'ws://localhost:8081'
 
 // Le token CSRF est conserve en memoire (pas en localStorage : il vit avec
 // la session courante du navigateur, comme le cookie). On l'alimente apres
