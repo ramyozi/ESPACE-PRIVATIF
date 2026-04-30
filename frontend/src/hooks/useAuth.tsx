@@ -12,7 +12,8 @@ import { api, ApiError, setCsrfToken, type Me } from '@/services/api'
 interface AuthState {
   user: Me | null
   initializing: boolean
-  login: (email: string, password: string) => Promise<void>
+  /** Retourne le user authentifie sur succes (utile pour decider de la landing). */
+  login: (email: string, password: string) => Promise<Me>
   logout: () => Promise<void>
   /** Recharge l'utilisateur depuis /auth/me (utile apres update profil). */
   refresh: () => Promise<void>
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const result = await api.login(email, password)
     setUser(result.user)
+    return result.user
   }, [])
 
   const logout = useCallback(async () => {

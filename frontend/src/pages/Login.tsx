@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { ShieldCheck, Sparkles } from 'lucide-react'
 import { Loader } from '@/components/Loader'
 import { ErrorMessage } from '@/components/ErrorMessage'
@@ -13,6 +13,7 @@ import { ApiError } from '@/services/api'
 
 interface LocationState {
   from?: string
+  message?: string
 }
 
 /**
@@ -24,12 +25,24 @@ export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as LocationState | null)?.from ?? '/'
+  const state = location.state as LocationState | null
+  const from = state?.from
+  const sessionMessage = state?.message ?? null
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  /**
+   * Determine la landing apres connexion :
+   *  - admin -> /admin/documents
+   *  - user  -> "from" (URL initialement demandee si rejet auth) sinon /
+   */
+  function landingFor(role?: string): string {
+    if (role === 'admin') return '/admin/documents'
+    return from && from !== '/login' ? from : '/'
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -42,8 +55,8 @@ export function LoginPage() {
 
     setSubmitting(true)
     try {
-      await login(email.trim(), password)
-      navigate(from, { replace: true })
+      const me = await login(email.trim(), password)
+      navigate(landingFor(me?.role), { replace: true })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Erreur inattendue')
     } finally {
@@ -112,6 +125,13 @@ export function LoginPage() {
             Connectez-vous a votre espace privatif.
           </p>
 
+          {/* Message contextuel pousse depuis ProtectedRoute (session expiree). */}
+          {sessionMessage && (
+            <div className="mt-6 rounded-md border border-accent-200 bg-accent-50 px-3 py-2 text-sm text-accent-700 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-300">
+              {sessionMessage}
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
             <div className="space-y-1.5">
               <Label htmlFor="email">Adresse email</Label>
@@ -130,12 +150,12 @@ export function LoginPage() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Mot de passe</Label>
-                <a
-                  href="#"
+                <Link
+                  to="/forgot-password"
                   className="text-xs text-brand-500 hover:underline dark:text-accent-300"
                 >
                   Mot de passe oublie ?
-                </a>
+                </Link>
               </div>
               <Input
                 id="password"
