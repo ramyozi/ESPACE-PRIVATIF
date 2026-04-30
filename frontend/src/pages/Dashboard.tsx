@@ -1,20 +1,32 @@
 import { useEffect, useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { Layout } from '@/components/Layout'
 import { DocumentList, DocumentListSkeleton } from '@/components/DocumentList'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { useAuth } from '@/hooks/useAuth'
 import { ApiError, api, type DocumentItem } from '@/services/api'
 
 /**
  * Tableau de bord : liste des documents du locataire connecte.
- * Etats geres : chargement (skeleton), erreur (encart), vide, succes.
+ *
+ * Cas particulier : un admin n'a pas vocation a voir sa propre liste de
+ * documents (il en cree pour les locataires). On le renvoie directement vers
+ * la page admin pour eviter toute confusion d'UX.
  */
 export function DashboardPage() {
+  const { user } = useAuth()
   const [documents, setDocuments] = useState<DocumentItem[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
+  const isAdmin = user?.role === 'admin'
+
   useEffect(() => {
+    if (isAdmin) {
+      // L'admin sera redirige vers /admin/documents : pas de fetch inutile.
+      return
+    }
     let cancelled = false
     setLoading(true)
     setError(null)
@@ -39,7 +51,11 @@ export function DashboardPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [isAdmin])
+
+  if (isAdmin) {
+    return <Navigate to="/admin/documents" replace />
+  }
 
   return (
     <Layout>
@@ -52,9 +68,7 @@ export function DashboardPage() {
 
       {loading && <DocumentListSkeleton />}
 
-      {!loading && error && (
-        <ErrorMessage message={error} className="mb-3" />
-      )}
+      {!loading && error && <ErrorMessage message={error} className="mb-3" />}
 
       {!loading && !error && documents && documents.length === 0 && (
         <EmptyState
