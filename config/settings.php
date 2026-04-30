@@ -29,8 +29,9 @@ return [
             'sslmode' => $_ENV['DB_SSLMODE'] ?? 'require',
         ],
         'mail' => [
-            'dsn' => $_ENV['MAIL_DSN'] ?? 'null://null',
-            'from' => $_ENV['MAIL_FROM'] ?? 'no-reply@espace-privatif.local',
+            // Provider unique : Resend (HTTPS API, pas de SMTP).
+            'apiKey' => $_ENV['RESEND_API_KEY'] ?? '',
+            'from' => $_ENV['MAIL_FROM'] ?? 'no-reply@realsoft.espace.privatif',
             'fromName' => $_ENV['MAIL_FROM_NAME'] ?? 'Espace Privatif',
         ],
         'session' => [

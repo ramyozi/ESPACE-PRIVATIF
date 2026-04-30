@@ -55,9 +55,9 @@ $documents = new DocumentRepository($connection);
 $users = new UserRepository($connection);
 $audit = new AuditService(new AuditLogRepository($connection));
 $mail = new MailService($connection, [
-    'from' => $_ENV['MAIL_FROM'] ?? 'no-reply@espace-privatif.local',
+    'from' => $_ENV['MAIL_FROM'] ?? 'no-reply@realsoft.espace.privatif',
     'fromName' => $_ENV['MAIL_FROM_NAME'] ?? 'Espace Privatif',
-    'dsn' => $_ENV['MAIL_DSN'] ?? 'null://null',
+    'apiKey' => $_ENV['RESEND_API_KEY'] ?? '',
 ], $logger);
 
 /**

@@ -3,26 +3,26 @@
 declare(strict_types=1);
 
 /**
- * Worker tres simple qui depile la table mail_queue et envoie via Symfony Mailer.
- * En dev, le DSN par defaut est "null://null" : les mails ne sont pas envoyes
- * mais leurs informations sont quand meme tracees en log.
+ * Worker qui depile mail_queue et envoie via Resend.
  *
  * Lancement :
  *   docker-compose exec app php bin/mail-worker.php
  *
- * En production reelle, ce worker tournerait en boucle (systemd ou supervisor).
- * Ici on traite un batch puis on quitte, par souci de simplicite.
+ * Rejouable : on reprend uniquement les lignes "pending". Une ligne est
+ * marquee "sent" sur succes, "failed" apres le 3e echec consecutif.
+ *
+ * Aucune dependance SMTP. Si RESEND_API_KEY est absent, le worker s'arrete
+ * proprement (mode dev, on laisse les mails en file).
  */
 
 use App\Database\Connection;
-use Symfony\Component\Mailer\Mailer;
-use Symfony\Component\Mailer\Transport;
-use Symfony\Component\Mime\Email;
+use App\Services\MailRenderer;
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../config/bootstrap-env.php';
 
 $dbConfig = [
+    'driver' => $_ENV['DB_DRIVER'] ?? 'mysql',
     'host' => $_ENV['DB_HOST'] ?? 'db',
     'port' => (int) ($_ENV['DB_PORT'] ?? 3306),
     'name' => $_ENV['DB_NAME'] ?? 'espace_privatif',
@@ -32,9 +32,16 @@ $dbConfig = [
 
 $pdo = (new Connection($dbConfig))->pdo();
 
-$mailer = new Mailer(Transport::fromDsn($_ENV['MAIL_DSN'] ?? 'null://null'));
-$from = $_ENV['MAIL_FROM'] ?? 'no-reply@espace-privatif.local';
+$apiKey = $_ENV['RESEND_API_KEY'] ?? '';
+$from = $_ENV['MAIL_FROM'] ?? 'no-reply@realsoft.espace.privatif';
 $fromName = $_ENV['MAIL_FROM_NAME'] ?? 'Espace Privatif';
+
+if ($apiKey === '') {
+    fwrite(STDERR, "RESEND_API_KEY absent : aucun envoi possible. Sortie.\n");
+    exit(0);
+}
+
+$resend = Resend::client($apiKey);
 
 $select = $pdo->prepare(
     "SELECT * FROM mail_queue WHERE status = 'pending' ORDER BY id ASC LIMIT 50"
@@ -48,21 +55,20 @@ $markFailed = $pdo->prepare(
 
 $select->execute();
 $rows = $select->fetchAll();
-echo count($rows), " mails a traiter\n";
+echo count($rows), " mails a traiter via Resend\n";
 
 foreach ($rows as $row) {
     $variables = json_decode((string) $row['variables'], true) ?? [];
-    // Rendu minimal du corps : on assemble un texte simple par template
-    $body = renderBody((string) $row['template'], $variables);
-
-    $email = (new Email())
-        ->from(sprintf('%s <%s>', $fromName, $from))
-        ->to((string) $row['to_email'])
-        ->subject((string) $row['subject'])
-        ->text($body);
+    $template = (string) $row['template'];
 
     try {
-        $mailer->send($email);
+        $resend->emails->send([
+            'from' => sprintf('%s <%s>', $fromName, $from),
+            'to' => [(string) $row['to_email']],
+            'subject' => (string) $row['subject'],
+            'html' => MailRenderer::renderHtml($template, $variables),
+            'text' => MailRenderer::renderText($template, $variables),
+        ]);
         $markSent->execute(['id' => $row['id']]);
         echo "OK  #{$row['id']} -> {$row['to_email']}\n";
     } catch (\Throwable $e) {
@@ -70,36 +76,4 @@ foreach ($rows as $row) {
         $markFailed->execute(['st' => $status, 'id' => $row['id']]);
         echo "ERR #{$row['id']} : ", $e->getMessage(), "\n";
     }
-}
-
-/**
- * Rendu texte minimal des templates connus.
- * On evite Twig ici pour rester sans dependance de fichiers.
- */
-function renderBody(string $template, array $vars): string
-{
-    return match ($template) {
-        'otp_signature' => sprintf(
-            "Votre code de signature : %s\nValidite : %d minutes.\n",
-            (string) ($vars['code'] ?? ''),
-            (int) ($vars['ttl_minutes'] ?? 5),
-        ),
-        'signature_done_locataire' => sprintf(
-            "Votre signature du document \"%s\" a bien ete enregistree le %s.\n",
-            (string) ($vars['document'] ?? ''),
-            (string) ($vars['signedAt'] ?? ''),
-        ),
-        'signature_done_manager' => sprintf(
-            "Le locataire %s a signe le document \"%s\" le %s.\n",
-            (string) ($vars['locataire'] ?? ''),
-            (string) ($vars['document'] ?? ''),
-            (string) ($vars['signedAt'] ?? ''),
-        ),
-        'signature_finalized' => sprintf(
-            "Votre document \"%s\" est disponible signe :\n%s\n",
-            (string) ($vars['document'] ?? ''),
-            (string) ($vars['pdfUrl'] ?? ''),
-        ),
-        default => "Notification Espace Privatif\n",
-    };
 }
