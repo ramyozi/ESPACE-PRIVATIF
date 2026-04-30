@@ -9,6 +9,7 @@ use App\Repositories\UserRepository;
 use DateTimeImmutable;
 use Psr\Log\LoggerInterface;
 use RuntimeException;
+use Throwable;
 
 /**
  * Service de reinitialisation de mot de passe.
@@ -42,43 +43,86 @@ final class PasswordResetService
     public function requestReset(string $email): ?string
     {
         $email = strtolower(trim($email));
-        if ($email === '') return null;
-
-        $user = $this->users->findByEmail($email);
-        if ($user === null) {
-            // On loggue mais on ne renvoie pas d'erreur a l'utilisateur :
-            // anti-enumeration des comptes.
-            $this->logger->info('password_reset.email_unknown', ['email' => $email]);
+        if ($email === '') {
+            $this->logger->info('password_reset.empty_email');
             return null;
         }
 
-        // On invalide les eventuels liens precedents (un seul reset actif a la fois)
-        $this->magicLinks->invalidatePrevious($user->id, self::PURPOSE);
+        // Tout le corps est protege : anti-enumeration cote controleur exige
+        // que cette methode ne propage JAMAIS d'exception. Si quelque chose
+        // casse en interne (DB, mail, etc.), on log avec details et on retourne
+        // null silencieusement -> le controleur repond 200 generique au client.
+        try {
+            $user = $this->users->findByEmail($email);
+            if ($user === null) {
+                $this->logger->info('password_reset.user_not_found', ['email' => $email]);
+                return null;
+            }
 
-        // Token aleatoire 32 octets, transmis en clair par mail, stocke en hash.
-        $token = bin2hex(random_bytes(32));
-        $hash = hash('sha256', $token);
-        $expiresAt = new DateTimeImmutable('+' . self::TOKEN_TTL_MINUTES . ' minutes');
+            $this->logger->info('password_reset.user_found', [
+                'user_id' => $user->id,
+                'tenant_id' => $user->tenantId,
+                'email' => $user->email,
+            ]);
 
-        $this->magicLinks->create($user->tenantId, $user->id, $hash, self::PURPOSE, $expiresAt);
+            // On invalide les eventuels liens precedents (un seul reset actif a la fois)
+            $this->magicLinks->invalidatePrevious($user->id, self::PURPOSE);
 
-        // URL de reset cote front. APP_URL doit pointer sur le frontend en prod.
-        $resetUrl = rtrim($this->appUrl, '/') . '/reset-password?token=' . $token;
+            // Token aleatoire 32 octets, transmis en clair par mail, stocke en hash.
+            $token = bin2hex(random_bytes(32));
+            $hash = hash('sha256', $token);
+            $expiresAt = new DateTimeImmutable('+' . self::TOKEN_TTL_MINUTES . ' minutes');
 
-        $this->mail->queue(
-            tenantId: $user->tenantId,
-            to: $user->email,
-            subject: 'Reinitialisation de votre mot de passe',
-            template: 'password_reset',
-            variables: [
-                'resetUrl' => $resetUrl,
-                'ttl_minutes' => self::TOKEN_TTL_MINUTES,
-            ],
-        );
+            $linkId = $this->magicLinks->create($user->tenantId, $user->id, $hash, self::PURPOSE, $expiresAt);
+            $this->logger->info('password_reset.token_created', [
+                'user_id' => $user->id,
+                'magic_link_id' => $linkId,
+                'expires_at' => $expiresAt->format(DATE_ATOM),
+            ]);
 
-        $this->logger->info('password_reset.requested', ['user_id' => $user->id]);
+            // URL de reset cote front. FRONTEND_URL DOIT pointer sur le frontend
+            // public en prod (Vercel). Si on detecte un fallback localhost alors
+            // qu'on n'est pas en dev, on log un warning explicite : c'est le
+            // signe que FRONTEND_URL n'est pas configure sur l'env Render.
+            $base = rtrim($this->appUrl, '/');
+            if ($base === '' || str_contains($base, 'localhost') || str_contains($base, '127.0.0.1')) {
+                $this->logger->warning('password_reset.frontend_url_looks_local', [
+                    'frontend_url' => $base,
+                    'hint' => 'Definir FRONTEND_URL=https://<domaine-front> dans l\'environnement.',
+                ]);
+            }
+            $resetUrl = $base . '/reset-password?token=' . $token;
 
-        return $token;
+            $this->mail->queue(
+                tenantId: $user->tenantId,
+                to: $user->email,
+                subject: 'Reinitialisation de votre mot de passe',
+                template: 'password_reset',
+                variables: [
+                    'resetUrl' => $resetUrl,
+                    'ttl_minutes' => self::TOKEN_TTL_MINUTES,
+                ],
+            );
+
+            $this->logger->info('password_reset.mail_queued', [
+                'user_id' => $user->id,
+                'to' => $user->email,
+            ]);
+
+            return $token;
+        } catch (Throwable $e) {
+            // Source du 500 visible dans les logs : type, message, fichier, ligne.
+            // Reponse au client reste 200 generique pour ne pas trahir l'existence
+            // du compte ni exposer un detail technique.
+            $this->logger->error('password_reset.failed', [
+                'email' => $email,
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+            return null;
+        }
     }
 
     /**

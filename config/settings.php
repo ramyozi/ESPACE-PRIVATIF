@@ -14,8 +14,11 @@ return [
             'url' => $_ENV['APP_URL'] ?? 'http://localhost:8080',
             // URL publique du frontend (Vercel en prod). Sert a construire
             // les liens dans les emails (ex. lien reset password).
-            // Fallback sur APP_URL si non defini (utile en local meme origine).
-            'frontendUrl' => $_ENV['FRONTEND_URL'] ?? ($_ENV['APP_URL'] ?? 'http://localhost:5173'),
+            // ATTENTION : ne PAS retomber sur APP_URL ici, qui pointe sur l'API
+            // et donnerait un lien casse dans les mails. En prod, FRONTEND_URL
+            // doit etre defini explicitement (env Render). Le localhost n'est
+            // qu'un dernier filet pour le dev local.
+            'frontendUrl' => $_ENV['FRONTEND_URL'] ?? 'http://localhost:5173',
             'secret' => $_ENV['APP_SECRET'] ?? 'change-me',
             // Liste blanche d'origines autorisees pour CORS (separees par virgule).
             // Vide = pas de header CORS (mode local meme origine).
