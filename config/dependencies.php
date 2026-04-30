@@ -142,6 +142,7 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(DocumentService::class),
             $c->get(DocumentRepository::class),
             $c->get(PdfAccessTokenService::class),
+            $c->get(LoggerInterface::class),
         ),
 
         // Controleur admin : reutilise le service de depot SOTHIS + storage PDF

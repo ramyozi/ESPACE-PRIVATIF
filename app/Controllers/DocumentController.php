@@ -11,6 +11,7 @@ use App\Services\DocumentService;
 use App\Services\PdfAccessTokenService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Log\LoggerInterface;
 use Slim\Psr7\Stream;
 
 /**
@@ -22,8 +23,17 @@ final class DocumentController
         private readonly DocumentService $documentService,
         private readonly DocumentRepository $documents,
         private readonly PdfAccessTokenService $pdfAccess,
+        private readonly LoggerInterface $logger,
     ) {
     }
+
+    /**
+     * Racines de fichiers acceptees pour la resolution d'un pdf_path :
+     *  - storage/pdfs/  : uploads admin (PdfStorageService::store)
+     *  - docs/          : assets de demo embarques dans le repo
+     * On essaie chaque racine dans l'ordre, on prend la premiere qui resout.
+     */
+    private const ALLOWED_ROOTS = ['storage/pdfs', 'docs'];
 
     public function list(Request $request, Response $response): Response
     {
@@ -144,17 +154,15 @@ final class DocumentController
             return JsonResponse::error($response, 'remote_pdf', 'PDF distant non servi par cet endpoint', 404);
         }
 
-        $storageRoot = realpath(__DIR__ . '/../../storage/pdfs');
-        if ($storageRoot === false) {
-            return JsonResponse::error($response, 'storage_unavailable', 'Stockage indisponible', 500);
-        }
-
-        $candidate = str_starts_with($rawPath, 'storage/pdfs/')
-            ? __DIR__ . '/../../' . $rawPath
-            : $storageRoot . '/' . ltrim($rawPath, '/');
-
-        $resolved = realpath($candidate);
-        if ($resolved === false || !str_starts_with($resolved, $storageRoot . DIRECTORY_SEPARATOR)) {
+        // Resolution multi-source (anti path-traversal) : on essaie chaque
+        // racine autorisee dans l'ordre. La premiere qui contient le fichier
+        // gagne. realpath() canonicalise et verifie l'existence.
+        $resolved = $this->resolvePdf($rawPath);
+        if ($resolved === null) {
+            $this->logger->warning('pdf.not_found', [
+                'document_id' => $document->id,
+                'pdf_path' => $rawPath,
+            ]);
             return JsonResponse::error($response, 'pdf_not_found', 'PDF indisponible', 404);
         }
 
@@ -176,6 +184,65 @@ final class DocumentController
             ->withHeader('Cache-Control', 'private, max-age=60')
             ->withHeader('X-Content-Type-Options', 'nosniff')
             ->withBody(new Stream($stream));
+    }
+
+    /**
+     * Resout un pdf_path stocke en BDD vers un chemin absolu sur disque.
+     *
+     * Strategie :
+     *   1. on prefixe la racine projet a chaque candidat possible
+     *   2. on teste storage/pdfs/<path>, storage/pdfs<path>, docs/<path>, etc.
+     *   3. on accepte aussi un chemin deja absolu sous une racine autorisee
+     *   4. realpath() canonicalise et bloque les ../
+     *   5. on verifie que le chemin final est BIEN sous une racine autorisee
+     *      (anti path-traversal)
+     *
+     * Retourne null si rien ne resout.
+     */
+    private function resolvePdf(string $rawPath): ?string
+    {
+        $projectRoot = realpath(__DIR__ . '/../..');
+        if ($projectRoot === false) return null;
+
+        $clean = ltrim($rawPath, '/');           // ex. "demo/Lettre.pdf"
+        $candidates = [];
+
+        // Cas 1 : le path stocke commence deja par une racine connue (storage/pdfs/...)
+        foreach (self::ALLOWED_ROOTS as $root) {
+            if (str_starts_with($clean, $root . '/')) {
+                $candidates[] = $projectRoot . '/' . $clean;
+            }
+        }
+
+        // Cas 2 : on prefixe chaque racine connue (cas seed "/demo/Lettre.pdf"
+        // qui doit retomber sur docs/Lettre.pdf via la racine "docs", etc.)
+        foreach (self::ALLOWED_ROOTS as $root) {
+            $candidates[] = $projectRoot . '/' . $root . '/' . $clean;
+        }
+
+        // Cas 3 : on tente aussi le basename pur dans chaque racine
+        // (ex. "Lettre.pdf" -> "docs/Lettre.pdf")
+        $basename = basename($clean);
+        if ($basename !== '' && $basename !== $clean) {
+            foreach (self::ALLOWED_ROOTS as $root) {
+                $candidates[] = $projectRoot . '/' . $root . '/' . $basename;
+            }
+        }
+
+        foreach ($candidates as $candidate) {
+            $resolved = realpath($candidate);
+            if ($resolved === false) continue;
+            // Verification anti path-traversal : le chemin canonique doit
+            // commencer par l'une des racines autorisees.
+            foreach (self::ALLOWED_ROOTS as $root) {
+                $rootAbs = realpath($projectRoot . '/' . $root);
+                if ($rootAbs !== false && str_starts_with($resolved, $rootAbs . DIRECTORY_SEPARATOR)) {
+                    return $resolved;
+                }
+            }
+        }
+
+        return null;
     }
 
     private static function slugify(string $value): string

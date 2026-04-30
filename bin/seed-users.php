@@ -104,7 +104,7 @@ $docs = [
         'user_ext' => 'LOC-1001',
         'type' => 'bail',
         'title' => 'Bail residence Les Lilas - Alice Martin',
-        'pdf' => '/demo/Lettre.pdf',
+        'pdf' => 'docs/Lettre.pdf',
         'sha' => str_repeat('a', 64),
     ],
     [
@@ -112,7 +112,7 @@ $docs = [
         'user_ext' => 'LOC-1002',
         'type' => 'avenant',
         'title' => 'Avenant revision loyer 2026 - Bruno Lefevre',
-        'pdf' => '/demo/Lettre.pdf',
+        'pdf' => 'docs/Lettre.pdf',
         'sha' => str_repeat('b', 64),
     ],
 ];

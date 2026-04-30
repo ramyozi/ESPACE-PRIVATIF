@@ -24,8 +24,9 @@ storage/pdfs/*
 storage/signatures/*
 !storage/signatures/.gitkeep
 
-# Documentation et tests : pas necessaires au build
-docs/
+# Documentation : on conserve docs/ dans l'image car il contient les PDF
+# de demo servis par DocumentController (ex. docs/Lettre.pdf utilise par les
+# documents seed). Diagrammes et tests restent exclus du build de prod.
 diagrams/
 tests/
 
