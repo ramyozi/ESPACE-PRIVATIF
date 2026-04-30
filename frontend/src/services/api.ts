@@ -266,6 +266,29 @@ export const api = {
   },
 
   /**
+   * Mot de passe oublie : declenche l'envoi d'un email de reset.
+   * Retour generique anti-enumeration : meme reponse si email inconnu.
+   */
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/auth/forgot-password', {
+      method: 'POST',
+      body: { email },
+      withCsrf: false,
+    })
+  },
+
+  /**
+   * Soumission du nouveau mot de passe avec le token recu par mail.
+   */
+  async resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+    return request<{ message: string }>('/auth/reset-password', {
+      method: 'POST',
+      body: { token, newPassword },
+      withCsrf: false,
+    })
+  },
+
+  /**
    * Met a jour l'email et/ou le mot de passe de l'utilisateur connecte.
    * Le mot de passe actuel est obligatoire pour valider l'identite.
    */
