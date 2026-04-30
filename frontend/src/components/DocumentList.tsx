@@ -21,27 +21,27 @@ export function DocumentList({ documents }: DocumentListProps) {
         <li key={doc.id}>
           <Link
             to={`/documents/${doc.id}`}
-            className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 rounded-lg"
+            className="group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
           >
-            <Card className="flex items-center gap-4 p-4 transition-colors hover:border-brand-500 hover:bg-slate-50">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600">
+            <Card className="flex items-center gap-4 border-sand-200 bg-white p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-card">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 transition-colors group-hover:bg-brand-500 group-hover:text-white">
                 <FileText className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="truncate text-sm font-medium text-slate-900">{doc.title}</p>
+                  <p className="truncate font-display text-base font-semibold text-ink">{doc.title}</p>
                   <StateBadge state={doc.state} />
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  Reference {doc.sothisDocumentId}
+                  <span className="font-mono">{doc.sothisDocumentId}</span>
                   {doc.deadline && (
-                    <span className="ml-2 text-slate-400">
+                    <span className="ml-3 text-slate-400">
                       A signer avant le {formatDate(doc.deadline)}
                     </span>
                   )}
                 </p>
               </div>
-              <ArrowRight className="h-4 w-4 text-slate-400" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500" />
             </Card>
           </Link>
         </li>

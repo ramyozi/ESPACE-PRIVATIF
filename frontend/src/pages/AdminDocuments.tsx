@@ -1,6 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, FileText, Send, Upload } from 'lucide-react'
+import { FileText, Send, Upload } from 'lucide-react'
 import { Layout } from '@/components/Layout'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,7 +32,6 @@ interface AdminUser {
  * + OTP + /sign/complete (aucune logique nouvelle cote signature).
  */
 export function AdminDocumentsPage() {
-  const navigate = useNavigate()
   const { user } = useAuth()
 
   const [users, setUsers] = useState<AdminUser[]>([])
@@ -120,20 +118,28 @@ export function AdminDocumentsPage() {
 
   return (
     <Layout>
-      <div className="mb-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/')}>
-          <ArrowLeft className="h-4 w-4" /> Retour
-        </Button>
-      </div>
+      <header className="mb-8">
+        <p className="text-sm font-medium uppercase tracking-wider text-accent-500">
+          Espace administrateur
+        </p>
+        <h1 className="mt-1 font-display text-2xl font-bold text-ink sm:text-3xl">
+          Deposer un document a signer
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Le document apparaitra immediatement dans l'espace du locataire choisi.
+        </p>
+      </header>
 
-      <Card className="mx-auto max-w-2xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" /> Deposer un document a signer
+      <Card className="mx-auto max-w-2xl border-sand-200 bg-white shadow-card">
+        <CardHeader className="border-b border-sand-100">
+          <CardTitle className="flex items-center gap-2 font-display text-lg">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-500">
+              <FileText className="h-4 w-4" />
+            </span>
+            Nouveau document
           </CardTitle>
           <CardDescription>
-            Le document apparaitra immediatement chez le locataire en attente
-            de signature. Tenant : <span className="font-mono">{user?.tenantId ?? '-'}</span>.
+            Tenant : <span className="font-mono text-brand-500">{user?.tenantId ?? '-'}</span>
           </CardDescription>
         </CardHeader>
 
