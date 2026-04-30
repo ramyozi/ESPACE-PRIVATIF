@@ -23,25 +23,25 @@ export function DocumentList({ documents }: DocumentListProps) {
             to={`/documents/${doc.id}`}
             className="group block rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
           >
-            <Card className="flex items-center gap-4 border-sand-200 bg-white p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-card">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 transition-colors group-hover:bg-brand-500 group-hover:text-white">
+            <Card className="flex items-center gap-4 border-sand-200 bg-white p-5 shadow-soft transition-all hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-card dark:border-brand-700 dark:bg-brand-800 dark:hover:border-accent-500/40 dark:hover:bg-brand-700">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-brand-50 text-brand-500 transition-colors group-hover:bg-brand-500 group-hover:text-white dark:bg-brand-700 dark:text-accent-300 dark:group-hover:bg-accent-500 dark:group-hover:text-brand-900">
                 <FileText className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="truncate font-display text-base font-semibold text-ink">{doc.title}</p>
+                  <p className="truncate font-display text-base font-semibold text-ink dark:text-sand-50">{doc.title}</p>
                   <StateBadge state={doc.state} />
                 </div>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-slate-500 dark:text-sand-300">
                   <span className="font-mono">{doc.sothisDocumentId}</span>
                   {doc.deadline && (
-                    <span className="ml-3 text-slate-400">
+                    <span className="ml-3 text-slate-400 dark:text-sand-300/70">
                       A signer avant le {formatDate(doc.deadline)}
                     </span>
                   )}
                 </p>
               </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500" />
+              <ArrowRight className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-500 dark:text-sand-300 dark:group-hover:text-accent-300" />
             </Card>
           </Link>
         </li>

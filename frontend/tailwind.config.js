@@ -1,6 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // Dark mode pilote par la classe `dark` posee sur <html>.
+  // C'est le hook useTheme qui la (de)pose, en respectant le choix utilisateur
+  // persiste en localStorage et le `prefers-color-scheme` systeme par defaut.
+  darkMode: 'class',
   theme: {
     extend: {
       // Palette inspiree de l'univers immobilier premium :

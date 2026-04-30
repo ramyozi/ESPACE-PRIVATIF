@@ -103,8 +103,9 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
         className={cn(
           'group relative overflow-hidden rounded-lg border-2 border-dashed bg-slate-50/50 transition-colors',
           'border-slate-300 hover:border-blue-400 focus-within:border-blue-500',
+          'dark:border-brand-700 dark:bg-brand-800/40 dark:hover:border-accent-500 dark:focus-within:border-accent-500',
           // Quand non-vide, on bascule sur un fond blanc et un border solide
-          !isEmpty && 'border-solid border-blue-200 bg-white',
+          !isEmpty && 'border-solid border-blue-200 bg-white dark:border-accent-500 dark:bg-sand-50',
           className,
         )}
       >
@@ -112,7 +113,7 @@ export const SignaturePad = forwardRef<SignaturePadHandle, SignaturePadProps>(
             On garde pointer-events: none pour ne pas bloquer le trace. */}
         {isEmpty && (
           <div
-            className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400"
+            className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 text-slate-400 dark:text-sand-300"
             aria-hidden
           >
             <PenLine className="h-6 w-6" />

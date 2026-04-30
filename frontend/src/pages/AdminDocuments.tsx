@@ -119,27 +119,27 @@ export function AdminDocumentsPage() {
   return (
     <Layout>
       <header className="mb-8">
-        <p className="text-sm font-medium uppercase tracking-wider text-accent-500">
+        <p className="text-sm font-medium uppercase tracking-wider text-accent-500 dark:text-accent-300">
           Espace administrateur
         </p>
-        <h1 className="mt-1 font-display text-2xl font-bold text-ink sm:text-3xl">
+        <h1 className="mt-1 font-display text-2xl font-bold text-ink dark:text-sand-50 sm:text-3xl">
           Deposer un document a signer
         </h1>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-slate-500 dark:text-sand-200">
           Le document apparaitra immediatement dans l'espace du locataire choisi.
         </p>
       </header>
 
-      <Card className="mx-auto max-w-2xl border-sand-200 bg-white shadow-card">
-        <CardHeader className="border-b border-sand-100">
+      <Card className="mx-auto max-w-2xl border-sand-200 bg-white shadow-card dark:border-brand-700 dark:bg-brand-800">
+        <CardHeader className="border-b border-sand-100 dark:border-brand-700">
           <CardTitle className="flex items-center gap-2 font-display text-lg">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-500">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-500 dark:bg-brand-700 dark:text-accent-300">
               <FileText className="h-4 w-4" />
             </span>
             Nouveau document
           </CardTitle>
           <CardDescription>
-            Tenant : <span className="font-mono text-brand-500">{user?.tenantId ?? '-'}</span>
+            Tenant : <span className="font-mono text-brand-500 dark:text-accent-300">{user?.tenantId ?? '-'}</span>
           </CardDescription>
         </CardHeader>
 
@@ -148,13 +148,13 @@ export function AdminDocumentsPage() {
             <div className="space-y-1.5">
               <Label htmlFor="user">Locataire destinataire</Label>
               {loadingUsers ? (
-                <div className="py-2 text-sm text-slate-500">
+                <div className="py-2 text-sm text-slate-500 dark:text-sand-200">
                   <Loader size={14} /> Chargement des locataires...
                 </div>
               ) : (
                 <select
                   id="user"
-                  className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="flex h-10 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 dark:border-brand-700 dark:bg-brand-800 dark:text-sand-50"
                   value={userId}
                   onChange={(e) => setUserId(e.target.value)}
                   disabled={submitting}

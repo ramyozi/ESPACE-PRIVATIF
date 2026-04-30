@@ -4,6 +4,7 @@ import { ShieldCheck, Sparkles } from 'lucide-react'
 import { Loader } from '@/components/Loader'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { Logo } from '@/components/Logo'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -51,7 +52,11 @@ export function LoginPage() {
   }
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-2">
+    <div className="relative grid min-h-screen lg:grid-cols-2">
+      {/* Toggle theme accessible avant meme la connexion */}
+      <div className="absolute right-4 top-4 z-10">
+        <ThemeToggle />
+      </div>
       {/* --- Colonne branding (desktop only) --- */}
       <aside className="relative hidden overflow-hidden bg-hero-gradient lg:flex lg:flex-col lg:justify-between lg:p-12 lg:text-white">
         {/* Motif decoratif discret */}
@@ -93,14 +98,16 @@ export function LoginPage() {
       </aside>
 
       {/* --- Colonne formulaire --- */}
-      <section className="flex flex-col justify-center bg-sand-50 px-6 py-12 sm:px-12">
+      <section className="flex flex-col justify-center bg-sand-50 px-6 py-12 dark:bg-brand-900 sm:px-12">
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-8 lg:hidden">
             <Logo size={36} />
           </div>
 
-          <h2 className="font-display text-2xl font-bold text-ink">Bon retour parmi nous.</h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <h2 className="font-display text-2xl font-bold text-ink dark:text-sand-50">
+            Bon retour parmi nous.
+          </h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-sand-200">
             Connectez-vous a votre espace privatif.
           </p>
 
@@ -122,7 +129,10 @@ export function LoginPage() {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <Label htmlFor="password">Mot de passe</Label>
-                <a href="#" className="text-xs text-brand-500 hover:underline">
+                <a
+                  href="#"
+                  className="text-xs text-brand-500 hover:underline dark:text-accent-300"
+                >
                   Mot de passe oublie ?
                 </a>
               </div>
@@ -141,7 +151,7 @@ export function LoginPage() {
             <Button
               type="submit"
               disabled={submitting}
-              className="w-full bg-brand-500 text-white shadow-card hover:bg-brand-600"
+              className="w-full bg-brand-500 text-white shadow-card hover:bg-brand-600 dark:bg-accent-500 dark:text-brand-900 dark:hover:bg-accent-400"
             >
               {submitting ? (
                 <>
@@ -152,7 +162,7 @@ export function LoginPage() {
               )}
             </Button>
 
-            <p className="pt-2 text-center text-xs text-slate-500">
+            <p className="pt-2 text-center text-xs text-slate-500 dark:text-sand-300">
               En continuant, vous acceptez nos conditions d'utilisation
               et notre politique de confidentialite.
             </p>

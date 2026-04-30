@@ -196,7 +196,7 @@ export function SignaturePage() {
 
           {/* Message d'info (OTP envoye, renvoye, etc.) */}
           {info && (
-            <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+            <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-700 dark:border-accent-500/30 dark:bg-accent-500/10 dark:text-accent-300">
               <MailCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
               <span>{info}</span>
             </div>
@@ -212,8 +212,8 @@ export function SignaturePage() {
                 <section className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <PenLine className="h-4 w-4 text-blue-600" aria-hidden />
-                      <h2 className="text-sm font-semibold text-slate-800">
+                      <PenLine className="h-4 w-4 text-blue-600 dark:text-accent-300" aria-hidden />
+                      <h2 className="text-sm font-semibold text-slate-800 dark:text-sand-50">
                         1. Tracez votre signature
                       </h2>
                     </div>
@@ -237,8 +237,8 @@ export function SignaturePage() {
                 {/* Section 2 : OTP */}
                 <section className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <MailCheck className="h-4 w-4 text-blue-600" aria-hidden />
-                    <h2 className="text-sm font-semibold text-slate-800">
+                    <MailCheck className="h-4 w-4 text-blue-600 dark:text-accent-300" aria-hidden />
+                    <h2 className="text-sm font-semibold text-slate-800 dark:text-sand-50">
                       2. Saisissez le code recu par email
                     </h2>
                   </div>
@@ -246,8 +246,8 @@ export function SignaturePage() {
                 </section>
 
                 {/* Mention legale */}
-                <div className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+                <div className="flex items-start gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:border-brand-700 dark:bg-brand-900/40 dark:text-sand-200">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-slate-500 dark:text-sand-300" aria-hidden />
                   <span>
                     En validant, vous reconnaissez avoir lu le document et acceptez
                     de le signer electroniquement. Une trace est conservee
@@ -258,7 +258,7 @@ export function SignaturePage() {
                 {error && <ErrorMessage message={error} />}
 
                 {/* Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 dark:border-brand-700">
                   <Button
                     type="button"
                     variant="ghost"
@@ -295,11 +295,11 @@ export function SignaturePage() {
           <CardContent className="space-y-5 pt-8 pb-6 text-center">
             {success && (
               <div className="space-y-3">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600 dark:bg-emerald-500/20 dark:text-emerald-300">
                   <CheckCircle2 className="h-8 w-8" aria-hidden />
                 </div>
                 <SuccessMessage message={success} />
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 dark:text-sand-200">
                   Vous allez recevoir un email de confirmation. Le document signe
                   sera disponible apres validation par notre service.
                 </p>
@@ -334,7 +334,7 @@ function StatusPill({
 }) {
   if (phase === 'submitting') {
     return (
-      <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800">
+      <span className="inline-flex items-center gap-2 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-800 dark:bg-accent-500/20 dark:text-accent-300">
         <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
         Validation en cours
       </span>
@@ -347,14 +347,14 @@ function StatusPill({
       className={cn(
         'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium',
         inProgress
-          ? 'bg-blue-100 text-blue-800'
-          : 'bg-slate-100 text-slate-700',
+          ? 'bg-blue-100 text-blue-800 dark:bg-brand-700 dark:text-sand-100'
+          : 'bg-slate-100 text-slate-700 dark:bg-brand-800 dark:text-sand-200',
       )}
     >
       <span
         className={cn(
           'h-2 w-2 rounded-full',
-          inProgress ? 'bg-blue-500' : 'bg-slate-400',
+          inProgress ? 'bg-blue-500 dark:bg-accent-400' : 'bg-slate-400 dark:bg-sand-300',
         )}
         aria-hidden
       />
