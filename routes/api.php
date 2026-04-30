@@ -36,12 +36,14 @@ return function (App $app): void {
         ->add(CsrfMiddleware::class)
         ->add(AuthMiddleware::class);
 
-    // Documents : lecture sans CSRF (GET), routes mutantes protegees par CsrfMiddleware
+    // Documents : lecture sans CSRF (GET), routes mutantes protegees par CsrfMiddleware.
+    // Le PDF est sorti du groupe pour pouvoir accepter une auth alternative
+    // par token URL (cf. plus bas) sans cookie.
     $app->group('/api/documents', function ($group): void {
         $group->get('', [DocumentController::class, 'list']);
         $group->get('/{id:[0-9]+}', [DocumentController::class, 'show']);
-        // Streaming du PDF (binaire), filtre par tenant + user
-        $group->get('/{id:[0-9]+}/pdf', [DocumentController::class, 'downloadPdf']);
+        // Emission d'un token court (60s) pour acceder au PDF sans cookie.
+        $group->get('/{id:[0-9]+}/pdf-token', [DocumentController::class, 'pdfToken']);
         $group->post('/{id:[0-9]+}/sign/start', [SignatureController::class, 'start'])
             ->add(CsrfMiddleware::class);
         $group->post('/{id:[0-9]+}/sign/complete', [SignatureController::class, 'complete'])
@@ -49,6 +51,14 @@ return function (App $app): void {
         $group->post('/{id:[0-9]+}/refuse', [SignatureController::class, 'refuse'])
             ->add(CsrfMiddleware::class);
     })->add(AuthMiddleware::class);
+
+    // Streaming du PDF : auth via token URL (preferentiel) OU session.
+    // Pas d'AuthMiddleware ici : la verification est faite dans le controleur
+    // pour permettre les acces iframe / target=_blank cross-origin sans cookie.
+    $app->get(
+        '/api/documents/{id:[0-9]+}/pdf',
+        [DocumentController::class, 'downloadPdf'],
+    );
 
     // Endpoints serveur a serveur SOTHIS : auth par cle API, pas de CSRF
     $app->post('/api/sothis/document/finalized', [SothisController::class, 'finalized']);

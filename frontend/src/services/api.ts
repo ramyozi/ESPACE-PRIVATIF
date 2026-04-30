@@ -312,6 +312,14 @@ export const api = {
     return request<DocumentItem>(`/documents/${id}`)
   },
 
+  /**
+   * Recupere un token court (60s) pour acceder au PDF sans dependre du cookie.
+   * Utilise par l'iframe de preview et le bouton telecharger.
+   */
+  async getPdfToken(id: number): Promise<{ token: string; expiresIn: number }> {
+    return request<{ token: string; expiresIn: number }>(`/documents/${id}/pdf-token`)
+  },
+
   async startSignature(id: number): Promise<void> {
     await request<unknown>(`/documents/${id}/sign/start`, { method: 'POST' })
   },

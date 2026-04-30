@@ -6,7 +6,9 @@ namespace App\Controllers;
 
 use App\Http\JsonResponse;
 use App\Models\User;
+use App\Repositories\DocumentRepository;
 use App\Services\DocumentService;
+use App\Services\PdfAccessTokenService;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Psr7\Stream;
@@ -16,8 +18,11 @@ use Slim\Psr7\Stream;
  */
 final class DocumentController
 {
-    public function __construct(private readonly DocumentService $documentService)
-    {
+    public function __construct(
+        private readonly DocumentService $documentService,
+        private readonly DocumentRepository $documents,
+        private readonly PdfAccessTokenService $pdfAccess,
+    ) {
     }
 
     public function list(Request $request, Response $response): Response
@@ -48,17 +53,13 @@ final class DocumentController
     }
 
     /**
-     * Streame le PDF associe au document si l'utilisateur connecte y a droit.
-     *
-     * Securite :
-     *  - tenant + user verifies via DocumentService::getForUser
-     *  - on n'expose JAMAIS le path brut : on streame le binaire
-     *  - resolution stricte du chemin sous storage/pdfs/ pour empecher
-     *    toute traversee de repertoire (../ etc.)
-     *  - si le pdf_path stocke est une URL externe (cas SOTHIS), on ne sert
-     *    rien depuis ce controleur (404) : c'est le frontend qui s'en charge.
+     * Emet un token d'acces court pour le PDF d'un document.
+     * Cet endpoint EST protege par session : seul un user authentifie ayant
+     * acces au document peut obtenir un token. Le token (60s de validite)
+     * est ensuite utilise dans l'URL du PDF pour eviter les soucis de cookie
+     * cross-origin (iframe, target="_blank", 3rd-party-cookies bloques).
      */
-    public function downloadPdf(Request $request, Response $response, array $args): Response
+    public function pdfToken(Request $request, Response $response, array $args): Response
     {
         /** @var User $user */
         $user = $request->getAttribute('user');
@@ -69,8 +70,76 @@ final class DocumentController
             return JsonResponse::error($response, 'document_not_found', 'Document introuvable', 404);
         }
 
+        $token = $this->pdfAccess->issue($user->id, $document->id);
+        return JsonResponse::ok($response, ['token' => $token, 'expiresIn' => 60]);
+    }
+
+    /**
+     * Streame le PDF associe au document.
+     *
+     * Authentification : DEUX modes acceptes pour contourner les blocages
+     * de cookies tiers cote navigateur :
+     *
+     *  1. Token signe en query string (?token=...) : verifie par
+     *     PdfAccessTokenService, lie a un (userId, documentId, exp). Sert
+     *     pour l'iframe de preview et le bouton telecharger sur Vercel.
+     *
+     *  2. Session classique (cookie EP_SESSID) si l'attribut "user" est
+     *     present dans la requete (cas where AuthMiddleware aurait tourne).
+     *     Sert pour les acces directs depuis l'API meme origine.
+     *
+     * Si aucune methode ne valide -> 401 auth_required.
+     *
+     * Securite supplementaire :
+     *  - tenant + user verifies via DocumentRepository::findForUser
+     *  - on n'expose JAMAIS le path brut : on streame le binaire
+     *  - resolution stricte du chemin sous storage/pdfs/ (anti path-traversal)
+     *  - si pdf_path est une URL externe, on renvoie 404 (pas de proxy)
+     */
+    public function downloadPdf(Request $request, Response $response, array $args): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $params = $request->getQueryParams();
+
+        // Resolution de l'identite : token URL (preferentiel) puis session.
+        $authUserId = null;
+        $authTenantId = null;
+
+        $token = (string) ($params['token'] ?? '');
+        if ($token !== '') {
+            $payload = $this->pdfAccess->verify($token);
+            if ($payload !== null && $payload['documentId'] === $id) {
+                // Le token contient le userId mais pas le tenantId : on charge
+                // le document via son id seul puis on verifie l'appartenance.
+                // Securite : un user d'un autre tenant ne peut pas avoir signe
+                // ce token (le payload contient SON userId).
+                $document = $this->documents->findById($id, $payload['userId']);
+                if ($document !== null) {
+                    $authUserId = $payload['userId'];
+                    $authTenantId = $document->tenantId;
+                }
+            }
+        }
+
+        // Fallback session si token absent / invalide
+        if ($authUserId === null) {
+            $user = $request->getAttribute('user');
+            if ($user instanceof User) {
+                $authUserId = $user->id;
+                $authTenantId = $user->tenantId;
+            }
+        }
+
+        if ($authUserId === null || $authTenantId === null) {
+            return JsonResponse::error($response, 'auth_required', 'Authentification requise', 401);
+        }
+
+        $document = $this->documentService->getForUser($id, $authTenantId, $authUserId);
+        if ($document === null) {
+            return JsonResponse::error($response, 'document_not_found', 'Document introuvable', 404);
+        }
+
         $rawPath = $document->pdfPath;
-        // URL externe : on n'agit pas en proxy ici (le client peut suivre l'URL).
         if (preg_match('#^https?://#i', $rawPath) === 1) {
             return JsonResponse::error($response, 'remote_pdf', 'PDF distant non servi par cet endpoint', 404);
         }
@@ -80,16 +149,12 @@ final class DocumentController
             return JsonResponse::error($response, 'storage_unavailable', 'Stockage indisponible', 500);
         }
 
-        // On accepte les chemins relatifs au repo (storage/pdfs/...) ou au
-        // dossier storage/pdfs/ directement. realpath verifie l'existence ET
-        // resout les ../ eventuels.
         $candidate = str_starts_with($rawPath, 'storage/pdfs/')
             ? __DIR__ . '/../../' . $rawPath
             : $storageRoot . '/' . ltrim($rawPath, '/');
 
         $resolved = realpath($candidate);
         if ($resolved === false || !str_starts_with($resolved, $storageRoot . DIRECTORY_SEPARATOR)) {
-            // Soit le fichier n'existe pas, soit tentative de path traversal.
             return JsonResponse::error($response, 'pdf_not_found', 'PDF indisponible', 404);
         }
 
@@ -98,14 +163,9 @@ final class DocumentController
             return JsonResponse::error($response, 'pdf_not_readable', 'PDF illisible', 500);
         }
 
-        // ?download=1 -> attachment (force le telechargement local).
-        // sans param      -> inline (utilise par l'iframe de preview).
-        $params = $request->getQueryParams();
         $isDownload = !empty($params['download']);
         $disposition = $isDownload ? 'attachment' : 'inline';
 
-        // Nom de fichier propose au navigateur : on prefere le titre metier
-        // (slugifie) plutot que le nom interne aleatoire du storage.
         $title = trim($document->title) !== '' ? $document->title : 'document';
         $slug = self::slugify($title);
         $downloadName = $slug . '.pdf';
@@ -113,15 +173,11 @@ final class DocumentController
         return $response
             ->withHeader('Content-Type', 'application/pdf')
             ->withHeader('Content-Disposition', $disposition . '; filename="' . $downloadName . '"')
-            ->withHeader('Cache-Control', 'private, max-age=300')
+            ->withHeader('Cache-Control', 'private, max-age=60')
             ->withHeader('X-Content-Type-Options', 'nosniff')
             ->withBody(new Stream($stream));
     }
 
-    /**
-     * Slug ASCII safe pour Content-Disposition filename.
-     * On garde lettres/chiffres/-_ uniquement (RFC 5987 compatible sans utf-8).
-     */
     private static function slugify(string $value): string
     {
         $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value) ?: $value;

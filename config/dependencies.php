@@ -5,6 +5,8 @@ declare(strict_types=1);
 use App\Controllers\AdminController;
 use App\Controllers\AuthController;
 use App\Controllers\SothisController;
+use App\Controllers\DocumentController;
+use App\Services\PdfAccessTokenService;
 use App\Services\PdfStorageService;
 use App\Services\SothisDepositService;
 use App\Database\Connection;
@@ -128,6 +130,19 @@ return function (ContainerBuilder $containerBuilder): void {
 
         // Stockage local des PDF deposes par l'admin (pourra basculer S3 plus tard)
         PdfStorageService::class => fn () => new PdfStorageService(),
+
+        // Token court signe pour acceder au PDF sans cookie (iframe, download)
+        PdfAccessTokenService::class => fn (ContainerInterface $c) => new PdfAccessTokenService(
+            (string) ($c->get('settings')['app']['secret'] ?? 'change-me'),
+        ),
+
+        // Controleur Documents : besoin d'une entree explicite a cause de
+        // PdfAccessTokenService (parametre string non auto-wirable).
+        DocumentController::class => fn (ContainerInterface $c) => new DocumentController(
+            $c->get(DocumentService::class),
+            $c->get(DocumentRepository::class),
+            $c->get(PdfAccessTokenService::class),
+        ),
 
         // Controleur admin : reutilise le service de depot SOTHIS + storage PDF
         AdminController::class => fn (ContainerInterface $c) => new AdminController(
