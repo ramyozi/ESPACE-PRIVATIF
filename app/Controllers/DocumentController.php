@@ -98,11 +98,34 @@ final class DocumentController
             return JsonResponse::error($response, 'pdf_not_readable', 'PDF illisible', 500);
         }
 
-        $filename = basename($resolved);
+        // ?download=1 -> attachment (force le telechargement local).
+        // sans param      -> inline (utilise par l'iframe de preview).
+        $params = $request->getQueryParams();
+        $isDownload = !empty($params['download']);
+        $disposition = $isDownload ? 'attachment' : 'inline';
+
+        // Nom de fichier propose au navigateur : on prefere le titre metier
+        // (slugifie) plutot que le nom interne aleatoire du storage.
+        $title = trim($document->title) !== '' ? $document->title : 'document';
+        $slug = self::slugify($title);
+        $downloadName = $slug . '.pdf';
+
         return $response
             ->withHeader('Content-Type', 'application/pdf')
-            ->withHeader('Content-Disposition', 'inline; filename="' . $filename . '"')
+            ->withHeader('Content-Disposition', $disposition . '; filename="' . $downloadName . '"')
             ->withHeader('Cache-Control', 'private, max-age=300')
+            ->withHeader('X-Content-Type-Options', 'nosniff')
             ->withBody(new Stream($stream));
+    }
+
+    /**
+     * Slug ASCII safe pour Content-Disposition filename.
+     * On garde lettres/chiffres/-_ uniquement (RFC 5987 compatible sans utf-8).
+     */
+    private static function slugify(string $value): string
+    {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value) ?: $value;
+        $slug = preg_replace('/[^A-Za-z0-9._-]+/', '-', $ascii) ?? '';
+        return trim($slug, '-_.') ?: 'document';
     }
 }
