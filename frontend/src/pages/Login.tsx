@@ -1,16 +1,10 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { ShieldCheck, Sparkles } from 'lucide-react'
 import { Loader } from '@/components/Loader'
 import { ErrorMessage } from '@/components/ErrorMessage'
+import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/useAuth'
@@ -21,8 +15,9 @@ interface LocationState {
 }
 
 /**
- * Page de connexion. Formulaire simple email + mot de passe.
- * Le retour utilisateur est compose d'un loader sur le bouton et d'un encart d'erreur.
+ * Page de connexion : split-screen plein ecran.
+ *  - colonne gauche (cachee en mobile) : branding + valeurs produit
+ *  - colonne droite : formulaire centre, focus immediat sur email
  */
 export function LoginPage() {
   const { login } = useAuth()
@@ -49,7 +44,6 @@ export function LoginPage() {
       await login(email.trim(), password)
       navigate(from, { replace: true })
     } catch (e) {
-      // ApiError remonte un message deja traduit en francais
       setError(e instanceof ApiError ? e.message : 'Erreur inattendue')
     } finally {
       setSubmitting(false)
@@ -57,14 +51,60 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Connexion</CardTitle>
-          <CardDescription>Acces a votre espace privatif</CardDescription>
-        </CardHeader>
-        <form onSubmit={handleSubmit} noValidate>
-          <CardContent className="space-y-4">
+    <div className="grid min-h-screen lg:grid-cols-2">
+      {/* --- Colonne branding (desktop only) --- */}
+      <aside className="relative hidden overflow-hidden bg-hero-gradient lg:flex lg:flex-col lg:justify-between lg:p-12 lg:text-white">
+        {/* Motif decoratif discret */}
+        <div
+          className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-accent-400/10 blur-3xl"
+          aria-hidden
+        />
+        <div
+          className="pointer-events-none absolute -bottom-32 -left-16 h-96 w-96 rounded-full bg-white/5 blur-3xl"
+          aria-hidden
+        />
+
+        <Logo variant="light" size={36} />
+
+        <div className="relative max-w-md">
+          <h1 className="font-display text-4xl font-bold leading-tight">
+            Signez vos documents en toute serenite.
+          </h1>
+          <p className="mt-4 text-base leading-relaxed text-white/80">
+            Espace Privatif vous accompagne pour gerer vos documents
+            locatifs en quelques clics, depuis n'importe quel appareil.
+          </p>
+
+          <ul className="mt-8 space-y-3 text-sm text-white/90">
+            <li className="flex items-start gap-3">
+              <ShieldCheck className="mt-0.5 h-5 w-5 text-accent-400" aria-hidden />
+              <span>Signature electronique securisee avec verification par email</span>
+            </li>
+            <li className="flex items-start gap-3">
+              <Sparkles className="mt-0.5 h-5 w-5 text-accent-400" aria-hidden />
+              <span>Acces immediat a vos documents et leur historique</span>
+            </li>
+          </ul>
+        </div>
+
+        <p className="relative text-xs text-white/60">
+          &copy; {new Date().getFullYear()} Realsoft Immobilier
+        </p>
+      </aside>
+
+      {/* --- Colonne formulaire --- */}
+      <section className="flex flex-col justify-center bg-sand-50 px-6 py-12 sm:px-12">
+        <div className="mx-auto w-full max-w-sm">
+          <div className="mb-8 lg:hidden">
+            <Logo size={36} />
+          </div>
+
+          <h2 className="font-display text-2xl font-bold text-ink">Bon retour parmi nous.</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Connectez-vous a votre espace privatif.
+          </p>
+
+          <form onSubmit={handleSubmit} noValidate className="mt-8 space-y-5">
             <div className="space-y-1.5">
               <Label htmlFor="email">Adresse email</Label>
               <Input
@@ -74,12 +114,18 @@ export function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 disabled={submitting}
-                placeholder="prenom.nom@example.test"
+                placeholder="prenom.nom@example.fr"
                 required
+                autoFocus
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="password">Mot de passe</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Mot de passe</Label>
+                <a href="#" className="text-xs text-brand-500 hover:underline">
+                  Mot de passe oublie ?
+                </a>
+              </div>
               <Input
                 id="password"
                 type="password"
@@ -91,9 +137,12 @@ export function LoginPage() {
               />
             </div>
             {error && <ErrorMessage message={error} />}
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={submitting} className="w-full">
+
+            <Button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-brand-500 text-white shadow-card hover:bg-brand-600"
+            >
               {submitting ? (
                 <>
                   <Loader size={18} /> Connexion...
@@ -102,9 +151,14 @@ export function LoginPage() {
                 'Se connecter'
               )}
             </Button>
-          </CardFooter>
-        </form>
-      </Card>
+
+            <p className="pt-2 text-center text-xs text-slate-500">
+              En continuant, vous acceptez nos conditions d'utilisation
+              et notre politique de confidentialite.
+            </p>
+          </form>
+        </div>
+      </section>
     </div>
   )
 }

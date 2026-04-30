@@ -2,6 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Hierarchie typographique : Plus Jakarta Sans sur les titres */
+  h1, h2, h3, h4 {
+    font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  /* Focus ring premium, coherent partout */
+  *:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(31, 58, 77, 0.15);
+    border-radius: 0.375rem;
+  }
+}
+
+@layer utilities {
+  /* Container central, max-width responsive */
+  .container-app {
+    @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;
+  }
+}
+
 /* Reset leger pour le canvas signature */
 canvas {
   touch-action: none;

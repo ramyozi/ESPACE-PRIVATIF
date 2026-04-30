@@ -17,12 +17,12 @@ export const stateLabels: Record<DocumentItem['state'], string> = {
  * Classes Tailwind pour le badge correspondant.
  */
 export const stateBadgeClasses: Record<DocumentItem['state'], string> = {
-  en_attente_signature: 'bg-amber-100 text-amber-800',
-  signature_en_cours: 'bg-blue-100 text-blue-800',
-  signe: 'bg-indigo-100 text-indigo-800',
-  signe_valide: 'bg-emerald-100 text-emerald-800',
-  refuse: 'bg-red-100 text-red-800',
-  expire: 'bg-slate-200 text-slate-700',
+  en_attente_signature: 'bg-accent-100 text-accent-700 ring-1 ring-accent-200',
+  signature_en_cours: 'bg-brand-50 text-brand-600 ring-1 ring-brand-100',
+  signe: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-100',
+  signe_valide: 'bg-success-50 text-success-700 ring-1 ring-emerald-200',
+  refuse: 'bg-danger-50 text-danger-700 ring-1 ring-rose-200',
+  expire: 'bg-sand-100 text-slate-600 ring-1 ring-sand-200',
 }
 
 /**
