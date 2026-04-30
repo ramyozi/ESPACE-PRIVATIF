@@ -1,5 +1,6 @@
-import { FileText, Calendar, Hash, FileType2 } from 'lucide-react'
+import { Calendar, Download, FileText, FileType2, Hash, Loader2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/cn'
 import type { DocumentItem } from '@/services/api'
 
@@ -21,10 +22,45 @@ type PdfStatus = 'loading' | 'success' | 'error'
  */
 export function DocumentPreviewCard({ document, className }: DocumentPreviewCardProps) {
   const [status, setStatus] = useState<PdfStatus>('loading')
+  const [downloading, setDownloading] = useState(false)
 
   // Base API : VITE_API_BASE_URL en prod, vide en dev (proxy Vite).
   const apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
   const pdfUrl = `${apiBase}/api/documents/${document.id}/pdf`
+  const pdfDownloadUrl = `${pdfUrl}?download=1`
+
+  /**
+   * Telechargement via fetch + Blob plutot qu'un simple <a download>.
+   * Avantage : on conserve l'auth par cookie cross-origin et on peut
+   * proposer un nom de fichier propre cote client.
+   */
+  async function handleDownload() {
+    if (status !== 'success' || downloading) return
+    setDownloading(true)
+    try {
+      const res = await fetch(pdfDownloadUrl, {
+        method: 'GET',
+        credentials: 'include',
+      })
+      if (!res.ok) throw new Error('download_failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = window.document.createElement('a')
+      a.href = url
+      // Slug local (le backend pose deja un Content-Disposition propre,
+      // ceci sert juste de fallback si le navigateur ne lit pas le header).
+      a.download = (document.title.replace(/[^A-Za-z0-9._-]+/g, '-') || 'document') + '.pdf'
+      window.document.body.appendChild(a)
+      a.click()
+      window.document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch {
+      // Erreur silencieuse : on n'interrompt pas la signature pour autant.
+      // L'utilisateur peut reessayer ou continuer la signature.
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -70,15 +106,34 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
         className,
       )}
     >
-      {/* En-tete avec icone PDF */}
+      {/* En-tete avec icone PDF + bouton telecharger */}
       <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-100 text-blue-700">
           <FileText className="h-5 w-5" aria-hidden />
         </div>
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-slate-900">{document.title}</p>
           <p className="text-xs text-slate-500">{document.sothisDocumentId}</p>
         </div>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleDownload}
+          disabled={status !== 'success' || downloading}
+          title={
+            status === 'success'
+              ? 'Telecharger le document'
+              : "PDF indisponible pour le moment"
+          }
+        >
+          {downloading ? (
+            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+          ) : (
+            <Download className="h-4 w-4" aria-hidden />
+          )}
+          <span className="hidden sm:inline">Telecharger</span>
+        </Button>
       </div>
 
       {/* Zone preview : iframe si OK, skeleton sinon (loading et error) */}
