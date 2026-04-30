@@ -35,22 +35,39 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
   const pdfDownloadUrl = `${pdfUrl}?download=1`
 
   useEffect(() => {
-    // Garde-fou : si l'iframe ne se charge pas en 8s, on bascule en fallback.
+    let cancelled = false
+    setStatus('loading')
+
+    // Sonde Content-Type : on demande le PDF en GET et on regarde le header
+    // de reponse. Si ce n'est pas un PDF (404 JSON, 401, HTML d'erreur, etc.),
+    // on bascule directement en "Apercu indisponible" sans jamais afficher
+    // l'iframe (qui sinon rendrait le JSON brut).
+    fetch(pdfUrl, { method: 'GET', credentials: 'include' })
+      .then((res) => {
+        if (cancelled) return
+        const ct = (res.headers.get('Content-Type') ?? '').toLowerCase()
+        if (res.ok && ct.includes('application/pdf')) {
+          setStatus('success')
+        } else {
+          setStatus('error')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+
+    // Garde-fou ultime : si la sonde traine plus de 8s sans repondre,
+    // on tombe sur le skeleton "Apercu indisponible" pour ne pas bloquer.
     timerRef.current = window.setTimeout(() => {
+      if (cancelled) return
       setStatus((s) => (s === 'loading' ? 'error' : s))
     }, 8000)
+
     return () => {
+      cancelled = true
       if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     }
   }, [pdfUrl])
-
-  function handleIframeLoad() {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-    setStatus('success')
-  }
 
   function handleIframeError() {
     setStatus('error')
@@ -100,24 +117,18 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
         </a>
       </div>
 
-      {/* Zone preview : iframe avec overlay skeleton tant que onLoad n'a pas tire */}
+      {/* Zone preview : iframe affichee uniquement si la sonde a confirme un PDF.
+          Sinon on rend le skeleton "loading" ou "Apercu indisponible". */}
       <div className="flex-1 space-y-2 p-5">
         <div className="relative h-[400px] w-full overflow-hidden rounded-md border border-slate-200 bg-white dark:border-brand-700 dark:bg-sand-50">
-          {/* L'iframe est toujours montee : le navigateur tente de charger.
-              Si erreur reseau / 4xx, onError se declenche -> fallback. */}
-          <iframe
-            src={pdfUrl}
-            title={`Apercu du document ${document.title}`}
-            className={cn(
-              'h-full w-full bg-white transition-opacity',
-              status === 'success' ? 'opacity-100' : 'opacity-0',
-            )}
-            onLoad={handleIframeLoad}
-            onError={handleIframeError}
-          />
-
-          {/* Overlay : skeleton pendant le chargement, message si echec. */}
-          {status !== 'success' && (
+          {status === 'success' ? (
+            <iframe
+              src={pdfUrl}
+              title={`Apercu du document ${document.title}`}
+              className="h-full w-full bg-white"
+              onError={handleIframeError}
+            />
+          ) : (
             <div className="absolute inset-0 flex items-center justify-center p-4">
               <PreviewSkeleton loading={status === 'loading'} />
             </div>
