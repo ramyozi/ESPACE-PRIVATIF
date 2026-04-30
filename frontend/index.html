@@ -21,8 +21,21 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap"
       rel="stylesheet"
     />
+
+    <!-- Anti-FOUC : on applique le theme AVANT que React monte, pour eviter
+         un flash en mode clair quand l'utilisateur prefere le mode sombre. -->
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem('ep-theme');
+          var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = stored === 'dark' || (!stored && prefersDark);
+          if (dark) document.documentElement.classList.add('dark');
+        } catch (_) {}
+      })();
+    </script>
   </head>
-  <body class="min-h-screen bg-sand-50 font-sans text-ink antialiased">
+  <body class="min-h-screen bg-sand-50 font-sans text-ink antialiased dark:bg-brand-900 dark:text-sand-100">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

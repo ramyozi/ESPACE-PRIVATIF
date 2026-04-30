@@ -20,6 +20,13 @@
     box-shadow: 0 0 0 3px rgba(31, 58, 77, 0.15);
     border-radius: 0.375rem;
   }
+  .dark *:focus-visible {
+    box-shadow: 0 0 0 3px rgba(212, 162, 76, 0.35);
+  }
+
+  /* Fond applique entre le script anti-FOUC et le premier rendu React. */
+  html.dark { background-color: #0a141d; color-scheme: dark; }
+  html:not(.dark) { background-color: #faf8f5; color-scheme: light; }
 }
 
 @layer utilities {

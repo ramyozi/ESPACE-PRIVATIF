@@ -64,18 +64,18 @@ export function DashboardPage() {
     <Layout>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-sm font-medium uppercase tracking-wider text-accent-500">
+          <p className="text-sm font-medium uppercase tracking-wider text-accent-500 dark:text-accent-300">
             Espace Privatif
           </p>
-          <h1 className="mt-1 font-display text-2xl font-bold text-ink sm:text-3xl">
+          <h1 className="mt-1 font-display text-2xl font-bold text-ink dark:text-sand-50 sm:text-3xl">
             {greeting}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-slate-500 dark:text-sand-200">
             Retrouvez ici vos documents en attente et leur historique.
           </p>
         </div>
         {!loading && !error && documents && pendingCount > 0 && (
-          <div className="rounded-full bg-accent-100 px-4 py-1.5 text-sm font-semibold text-accent-700">
+          <div className="rounded-full bg-accent-100 px-4 py-1.5 text-sm font-semibold text-accent-700 dark:bg-accent-500/15 dark:text-accent-300">
             {pendingCount} document{pendingCount > 1 ? 's' : ''} en attente
           </div>
         )}

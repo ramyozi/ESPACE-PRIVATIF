@@ -15,6 +15,7 @@ export function SuccessMessage({ message, className }: SuccessMessageProps) {
       role="status"
       className={cn(
         'flex items-start gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700',
+        'dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300',
         className,
       )}
     >

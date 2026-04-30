@@ -116,7 +116,7 @@ export function ProfilePage() {
               />
             </div>
 
-            <div className="border-t border-slate-100 pt-4 space-y-1.5">
+            <div className="border-t border-slate-100 pt-4 space-y-1.5 dark:border-brand-700">
               <Label htmlFor="currentPassword" className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4" /> Mot de passe actuel
               </Label>
@@ -143,7 +143,7 @@ export function ProfilePage() {
                 autoComplete="new-password"
                 minLength={8}
               />
-              <p className="text-xs text-slate-500">8 caracteres minimum.</p>
+              <p className="text-xs text-slate-500 dark:text-sand-300">8 caracteres minimum.</p>
             </div>
 
             {newPassword.length > 0 && (

@@ -60,9 +60,9 @@ export function OtpForm({ value, onChange, disabled, length = 6 }: OtpFormProps)
               key={i}
               className={cn(
                 'flex h-12 w-10 items-center justify-center rounded-md border-2 font-mono text-lg transition-all',
-                filled && 'border-blue-500 bg-white text-slate-900 shadow-sm',
-                !filled && active && 'border-blue-400 bg-white animate-pulse',
-                !filled && !active && 'border-slate-200 bg-slate-50 text-slate-300',
+                filled && 'border-blue-500 bg-white text-slate-900 shadow-sm dark:border-accent-500 dark:bg-brand-800 dark:text-sand-50',
+                !filled && active && 'border-blue-400 bg-white animate-pulse dark:border-accent-400 dark:bg-brand-800',
+                !filled && !active && 'border-slate-200 bg-slate-50 text-slate-300 dark:border-brand-700 dark:bg-brand-800/60 dark:text-sand-300/40',
                 disabled && 'opacity-50',
               )}
             >
@@ -91,7 +91,7 @@ export function OtpForm({ value, onChange, disabled, length = 6 }: OtpFormProps)
         className="tracking-[0.4em] text-center font-mono"
       />
 
-      <p className="text-xs text-slate-500">
+      <p className="text-xs text-slate-500 dark:text-sand-300">
         Le code a 6 chiffres a ete envoye a votre adresse email. Il est valable 5 minutes.
       </p>
     </div>

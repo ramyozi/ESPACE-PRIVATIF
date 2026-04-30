@@ -126,7 +126,7 @@ export function DocumentDetailPage() {
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-3 text-sm text-slate-700">
+          <CardContent className="space-y-3 text-sm text-slate-700 dark:text-sand-100">
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <DetailRow label="Cree le" value={formatDate(document.createdAt)} />
               <DetailRow
@@ -174,13 +174,13 @@ export function DocumentDetailPage() {
             )}
 
             {document.state === 'signe' && (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-slate-500 dark:text-sand-200">
                 En attente de validation par le gestionnaire.
               </p>
             )}
 
             {document.state === 'signe_valide' && document.hasSignedPdf && (
-              <p className="text-sm text-emerald-700">
+              <p className="text-sm text-emerald-700 dark:text-emerald-300">
                 Le document signe est disponible cote gestionnaire.
               </p>
             )}
@@ -206,8 +206,8 @@ interface DetailRowProps {
 function DetailRow({ label, value }: DetailRowProps) {
   return (
     <div>
-      <p className="text-xs uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="text-sm font-medium text-slate-900">{value}</p>
+      <p className="text-xs uppercase tracking-wide text-slate-400 dark:text-sand-300">{label}</p>
+      <p className="text-sm font-medium text-slate-900 dark:text-sand-50">{value}</p>
     </div>
   )
 }

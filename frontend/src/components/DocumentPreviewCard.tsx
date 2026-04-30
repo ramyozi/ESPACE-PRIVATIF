@@ -72,17 +72,18 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
     <div
       className={cn(
         'flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm',
+        'dark:border-brand-700 dark:bg-brand-800',
         className,
       )}
     >
       {/* En-tete : titre + bouton telecharger (toujours actif) */}
-      <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-100 text-blue-700">
+      <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 dark:border-brand-700 dark:bg-brand-900/40">
+        <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-100 text-blue-700 dark:bg-brand-700 dark:text-accent-300">
           <FileText className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900">{document.title}</p>
-          <p className="text-xs text-slate-500">{document.sothisDocumentId}</p>
+          <p className="truncate text-sm font-semibold text-slate-900 dark:text-sand-50">{document.title}</p>
+          <p className="text-xs text-slate-500 dark:text-sand-300">{document.sothisDocumentId}</p>
         </div>
         {/* Lien direct : top-level navigation, cookie cross-origin envoye
             sous SameSite=None+Secure. Plus fiable qu'un fetch+Blob. */}
@@ -92,7 +93,7 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
           target="_blank"
           rel="noopener noreferrer"
           title="Telecharger le document"
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-sand-100 dark:hover:bg-brand-700"
         >
           <Download className="h-4 w-4" aria-hidden />
           <span className="hidden sm:inline">Telecharger</span>
@@ -101,7 +102,7 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
 
       {/* Zone preview : iframe avec overlay skeleton tant que onLoad n'a pas tire */}
       <div className="flex-1 space-y-2 p-5">
-        <div className="relative h-[400px] w-full overflow-hidden rounded-md border border-slate-200 bg-white">
+        <div className="relative h-[400px] w-full overflow-hidden rounded-md border border-slate-200 bg-white dark:border-brand-700 dark:bg-sand-50">
           {/* L'iframe est toujours montee : le navigateur tente de charger.
               Si erreur reseau / 4xx, onError se declenche -> fallback. */}
           <iframe
@@ -125,29 +126,29 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
 
         {/* Meta-donnees du document */}
         <dl className="mt-4 space-y-2 text-sm">
-          <div className="flex items-center gap-2 text-slate-600">
-            <FileType2 className="h-4 w-4 text-slate-400" aria-hidden />
+          <div className="flex items-center gap-2 text-slate-600 dark:text-sand-200">
+            <FileType2 className="h-4 w-4 text-slate-400 dark:text-sand-300" aria-hidden />
             <dt className="sr-only">Type</dt>
             <dd>
-              <span className="text-slate-500">Type :</span>{' '}
-              <span className="font-medium text-slate-800 capitalize">{document.type}</span>
+              <span className="text-slate-500 dark:text-sand-300">Type :</span>{' '}
+              <span className="font-medium capitalize text-slate-800 dark:text-sand-50">{document.type}</span>
             </dd>
           </div>
-          <div className="flex items-center gap-2 text-slate-600">
-            <Hash className="h-4 w-4 text-slate-400" aria-hidden />
+          <div className="flex items-center gap-2 text-slate-600 dark:text-sand-200">
+            <Hash className="h-4 w-4 text-slate-400 dark:text-sand-300" aria-hidden />
             <dt className="sr-only">Reference</dt>
             <dd className="truncate">
-              <span className="text-slate-500">Reference :</span>{' '}
-              <span className="font-mono text-xs text-slate-700">{document.sothisDocumentId}</span>
+              <span className="text-slate-500 dark:text-sand-300">Reference :</span>{' '}
+              <span className="font-mono text-xs text-slate-700 dark:text-sand-100">{document.sothisDocumentId}</span>
             </dd>
           </div>
           {deadlineLabel && (
-            <div className="flex items-center gap-2 text-slate-600">
-              <Calendar className="h-4 w-4 text-slate-400" aria-hidden />
+            <div className="flex items-center gap-2 text-slate-600 dark:text-sand-200">
+              <Calendar className="h-4 w-4 text-slate-400 dark:text-sand-300" aria-hidden />
               <dt className="sr-only">Echeance</dt>
               <dd>
-                <span className="text-slate-500">A signer avant le :</span>{' '}
-                <span className="font-medium text-slate-800">{deadlineLabel}</span>
+                <span className="text-slate-500 dark:text-sand-300">A signer avant le :</span>{' '}
+                <span className="font-medium text-slate-800 dark:text-sand-50">{deadlineLabel}</span>
               </dd>
             </div>
           )}
@@ -166,25 +167,26 @@ function PreviewSkeleton({ loading }: { loading: boolean }) {
     <div
       className={cn(
         'w-full rounded-md border border-dashed border-slate-200 bg-slate-50/80 p-4',
+        'dark:border-brand-700 dark:bg-brand-800/60',
         loading && 'animate-pulse',
       )}
       aria-busy={loading}
     >
-      <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">
+      <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400 dark:text-sand-300">
         {loading ? "Chargement de l'apercu" : 'Apercu indisponible'}
       </p>
       <div className="space-y-1.5" aria-hidden>
-        <div className="h-2 w-3/4 rounded bg-slate-200" />
-        <div className="h-2 w-full rounded bg-slate-200" />
-        <div className="h-2 w-5/6 rounded bg-slate-200" />
-        <div className="h-2 w-2/3 rounded bg-slate-200" />
+        <div className="h-2 w-3/4 rounded bg-slate-200 dark:bg-brand-700" />
+        <div className="h-2 w-full rounded bg-slate-200 dark:bg-brand-700" />
+        <div className="h-2 w-5/6 rounded bg-slate-200 dark:bg-brand-700" />
+        <div className="h-2 w-2/3 rounded bg-slate-200 dark:bg-brand-700" />
         <div className="my-3" />
-        <div className="h-2 w-full rounded bg-slate-200" />
-        <div className="h-2 w-11/12 rounded bg-slate-200" />
-        <div className="h-2 w-3/4 rounded bg-slate-200" />
+        <div className="h-2 w-full rounded bg-slate-200 dark:bg-brand-700" />
+        <div className="h-2 w-11/12 rounded bg-slate-200 dark:bg-brand-700" />
+        <div className="h-2 w-3/4 rounded bg-slate-200 dark:bg-brand-700" />
       </div>
       {!loading && (
-        <p className="mt-3 text-xs text-slate-500">
+        <p className="mt-3 text-xs text-slate-500 dark:text-sand-300">
           Vous pouvez toujours telecharger le document via le bouton ci-dessus.
         </p>
       )}

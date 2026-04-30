@@ -59,9 +59,9 @@ export function SignatureStepper({ current, signatureDone }: SignatureStepperPro
               <div
                 className={cn(
                   'flex h-8 w-8 items-center justify-center rounded-full border-2 text-xs font-semibold transition-colors',
-                  completed && 'border-blue-600 bg-blue-600 text-white',
-                  active && 'border-blue-600 bg-white text-blue-600 shadow-sm',
-                  !completed && !active && 'border-slate-300 bg-white text-slate-400',
+                  completed && 'border-blue-600 bg-blue-600 text-white dark:border-accent-500 dark:bg-accent-500 dark:text-brand-900',
+                  active && 'border-blue-600 bg-white text-blue-600 shadow-sm dark:border-accent-400 dark:bg-brand-800 dark:text-accent-300',
+                  !completed && !active && 'border-slate-300 bg-white text-slate-400 dark:border-brand-700 dark:bg-brand-800 dark:text-sand-300',
                 )}
               >
                 {completed ? <Check className="h-4 w-4" aria-hidden /> : i + 1}
@@ -71,7 +71,7 @@ export function SignatureStepper({ current, signatureDone }: SignatureStepperPro
                 <span
                   className={cn(
                     'mx-2 hidden h-0.5 w-full max-w-[80px] md:block',
-                    i < currentIndex ? 'bg-blue-600' : 'bg-slate-200',
+                    i < currentIndex ? 'bg-blue-600 dark:bg-accent-500' : 'bg-slate-200 dark:bg-brand-700',
                   )}
                   aria-hidden
                 />
@@ -82,14 +82,14 @@ export function SignatureStepper({ current, signatureDone }: SignatureStepperPro
               <p
                 className={cn(
                   'text-sm font-semibold',
-                  active && 'text-blue-700',
-                  completed && 'text-slate-900',
-                  !active && !completed && 'text-slate-500',
+                  active && 'text-blue-700 dark:text-accent-300',
+                  completed && 'text-slate-900 dark:text-sand-50',
+                  !active && !completed && 'text-slate-500 dark:text-sand-300',
                 )}
               >
                 {step.label}
               </p>
-              <p className="text-xs text-slate-500">{step.hint}</p>
+              <p className="text-xs text-slate-500 dark:text-sand-300">{step.hint}</p>
             </div>
           </li>
         )
