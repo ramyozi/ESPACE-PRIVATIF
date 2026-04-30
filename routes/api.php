@@ -34,6 +34,8 @@ return function (App $app): void {
     $app->group('/api/documents', function ($group): void {
         $group->get('', [DocumentController::class, 'list']);
         $group->get('/{id:[0-9]+}', [DocumentController::class, 'show']);
+        // Streaming du PDF (binaire), filtre par tenant + user
+        $group->get('/{id:[0-9]+}/pdf', [DocumentController::class, 'downloadPdf']);
         $group->post('/{id:[0-9]+}/sign/start', [SignatureController::class, 'start'])
             ->add(CsrfMiddleware::class);
         $group->post('/{id:[0-9]+}/sign/complete', [SignatureController::class, 'complete'])
