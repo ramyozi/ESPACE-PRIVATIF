@@ -25,6 +25,12 @@ return function (App $app): void {
     $app->post('/api/auth/logout', [AuthController::class, 'logout'])->add(CsrfMiddleware::class);
     $app->get('/api/auth/me', [AuthController::class, 'me'])->add(AuthMiddleware::class);
     $app->get('/api/auth/csrf-token', [AuthController::class, 'csrfToken']);
+
+    // Mot de passe oublie : ces deux endpoints sont publics (pas de session,
+    // pas de CSRF puisqu'on n'a justement pas encore de session pour generer
+    // un token). La protection repose sur le token aleatoire envoye par mail.
+    $app->post('/api/auth/forgot-password', [AuthController::class, 'forgotPassword']);
+    $app->post('/api/auth/reset-password', [AuthController::class, 'resetPassword']);
     // Mise a jour profil (email + mot de passe) : auth + CSRF requis
     $app->post('/api/auth/profile', [AuthController::class, 'updateProfile'])
         ->add(CsrfMiddleware::class)

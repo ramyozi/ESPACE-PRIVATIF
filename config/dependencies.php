@@ -13,6 +13,7 @@ use App\Middleware\CsrfMiddleware;
 use App\Security\CsrfTokenManager;
 use App\Repositories\AuditLogRepository;
 use App\Repositories\DocumentRepository;
+use App\Repositories\MagicLinkRepository;
 use App\Repositories\OtpRepository;
 use App\Repositories\OutboxRepository;
 use App\Repositories\SignatureRepository;
@@ -22,6 +23,7 @@ use App\Services\AuthService;
 use App\Services\DocumentService;
 use App\Services\MailService;
 use App\Services\OtpService;
+use App\Services\PasswordResetService;
 use App\Services\SignatureFileService;
 use App\Services\SignatureService;
 use App\Services\SothisGateway;
@@ -63,6 +65,7 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(\App\Services\AuthService::class),
             $c->get(\App\Repositories\UserRepository::class),
             $c->get(CsrfTokenManager::class),
+            $c->get(PasswordResetService::class),
         ),
 
         // Repositories
@@ -72,6 +75,7 @@ return function (ContainerBuilder $containerBuilder): void {
         OtpRepository::class => fn (ContainerInterface $c) => new OtpRepository($c->get(Connection::class)),
         OutboxRepository::class => fn (ContainerInterface $c) => new OutboxRepository($c->get(Connection::class)),
         SignatureRepository::class => fn (ContainerInterface $c) => new SignatureRepository($c->get(Connection::class)),
+        MagicLinkRepository::class => fn (ContainerInterface $c) => new MagicLinkRepository($c->get(Connection::class)),
 
         // Services
         AuthService::class => fn (ContainerInterface $c) => new AuthService(
@@ -88,6 +92,16 @@ return function (ContainerBuilder $containerBuilder): void {
             $c->get(OtpRepository::class),
             $c->get(MailService::class),
             $c->get('settings')['otp'],
+        ),
+        // Reset de mot de passe : utilise UserRepository + MagicLinkRepository
+        // + MailService. APP_URL pointe sur le frontend (le lien envoye dans
+        // le mail est un lien front, pas un endpoint API).
+        PasswordResetService::class => fn (ContainerInterface $c) => new PasswordResetService(
+            $c->get(UserRepository::class),
+            $c->get(MagicLinkRepository::class),
+            $c->get(MailService::class),
+            $c->get(LoggerInterface::class),
+            (string) ($c->get('settings')['app']['frontendUrl'] ?? ''),
         ),
         DocumentService::class => fn (ContainerInterface $c) => new DocumentService(
             $c->get(DocumentRepository::class),

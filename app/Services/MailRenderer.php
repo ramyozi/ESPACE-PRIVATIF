@@ -42,6 +42,11 @@ final class MailRenderer
                 (string) ($vars['document'] ?? ''),
                 (string) ($vars['pdfUrl'] ?? ''),
             ),
+            'password_reset' => sprintf(
+                "Voici le lien pour reinitialiser votre mot de passe :\n%s\n\nValidite : %d minutes.\nSi vous n'avez pas demande cette operation, ignorez ce mail.\n",
+                (string) ($vars['resetUrl'] ?? ''),
+                (int) ($vars['ttl_minutes'] ?? 30),
+            ),
             default => "Notification Espace Privatif\n",
         };
     }
@@ -65,6 +70,10 @@ final class MailRenderer
             'signature_finalized' => self::finalizedHtml(
                 (string) ($vars['document'] ?? ''),
                 (string) ($vars['pdfUrl'] ?? ''),
+            ),
+            'password_reset' => self::passwordResetHtml(
+                (string) ($vars['resetUrl'] ?? ''),
+                (int) ($vars['ttl_minutes'] ?? 30),
             ),
             default => '<p>Notification Espace Privatif</p>',
         };
@@ -140,6 +149,30 @@ HTML;
 <p style="margin:0 0 12px;">
   Le locataire <strong>{$locataire}</strong> a signe le document
   <strong>{$document}</strong> le <strong>{$signedAt}</strong>.
+</p>
+HTML;
+    }
+
+    private static function passwordResetHtml(string $resetUrl, int $ttl): string
+    {
+        $url = htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8');
+        return <<<HTML
+<p style="margin:0 0 12px;">Bonjour,</p>
+<p style="margin:0 0 16px;">
+  Vous avez demande la reinitialisation de votre mot de passe.
+  Cliquez sur le bouton ci-dessous pour choisir un nouveau mot de passe.
+</p>
+<p style="margin:16px 0;">
+  <a href="{$url}" style="display:inline-block;padding:12px 22px;background:#1e2761;color:#ffffff;text-decoration:none;border-radius:6px;font-weight:600;">
+    Reinitialiser mon mot de passe
+  </a>
+</p>
+<p style="margin:8px 0 0;font-size:12px;color:#6b7280;">
+  Ce lien est valable {$ttl} minutes. Si vous n'avez pas demande cette
+  operation, ignorez ce mail : votre mot de passe restera inchange.
+</p>
+<p style="margin:8px 0 0;font-size:12px;color:#6b7280;word-break:break-all;">
+  Lien direct : {$url}
 </p>
 HTML;
     }
