@@ -1,4 +1,5 @@
 import { FileText, Calendar, Hash, FileType2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/cn'
 import type { DocumentItem } from '@/services/api'
 
@@ -7,19 +8,53 @@ interface DocumentPreviewCardProps {
   className?: string
 }
 
+type PdfStatus = 'loading' | 'success' | 'error'
+
 /**
- * Carte "preview" du document a signer.
+ * Carte preview d'un document a signer.
  *
- * On ne charge pas le PDF brut ici (le backend n'expose pas l'URL publique
- * directement, c'est volontaire). On affiche a la place un visuel sobre :
- *  - en-tete style "page de garde PDF" avec titre et reference SOTHIS
- *  - meta-donnees (type, deadline)
- *  - lignes simulees pour evoquer un document
- *
- * L'idee est de donner un repere visuel au locataire pendant la signature,
- * sans complexifier l'integration en V1.
+ *  - on tente de charger le PDF via l'endpoint authentifie
+ *    GET /api/documents/{id}/pdf (filtre tenant + user cote backend)
+ *  - si la sonde HEAD reussit, on affiche le PDF dans un <iframe>
+ *  - sinon (404, CORS, reseau), on retombe sur un skeleton sobre
+ *  - le rendu n'est jamais cassant : pas de crash, juste un fallback
  */
 export function DocumentPreviewCard({ document, className }: DocumentPreviewCardProps) {
+  const [status, setStatus] = useState<PdfStatus>('loading')
+
+  // Base API : VITE_API_BASE_URL en prod, vide en dev (proxy Vite).
+  const apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
+  const pdfUrl = `${apiBase}/api/documents/${document.id}/pdf`
+
+  useEffect(() => {
+    let cancelled = false
+    setStatus('loading')
+
+    fetch(pdfUrl, { method: 'GET', credentials: 'include' })
+      .then(async (res) => {
+        if (cancelled) return
+        if (!res.ok) {
+          setStatus('error')
+          return
+        }
+        const ct = res.headers.get('Content-Type') ?? ''
+        // On exige bien un PDF : si le backend renvoie du JSON (erreur)
+        // ou un HTML d'erreur, on bascule sur le skeleton.
+        if (!ct.toLowerCase().includes('application/pdf')) {
+          setStatus('error')
+          return
+        }
+        setStatus('success')
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [pdfUrl])
+
   const deadlineLabel = document.deadline
     ? new Date(document.deadline).toLocaleDateString('fr-FR', {
         day: '2-digit',
@@ -41,31 +76,22 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
           <FileText className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-900">
-            {document.title}
-          </p>
+          <p className="truncate text-sm font-semibold text-slate-900">{document.title}</p>
           <p className="text-xs text-slate-500">{document.sothisDocumentId}</p>
         </div>
       </div>
 
-      {/* Zone de preview simulee : lignes de texte */}
+      {/* Zone preview : iframe si OK, skeleton sinon (loading et error) */}
       <div className="flex-1 space-y-2 p-5">
-        <div className="rounded-md border border-dashed border-slate-200 bg-slate-50/60 p-4">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">
-            Apercu
-          </p>
-          <div className="space-y-1.5" aria-hidden>
-            {/* Lignes de texte simulees pour evoquer une page de document */}
-            <div className="h-2 w-3/4 rounded bg-slate-200" />
-            <div className="h-2 w-full rounded bg-slate-200" />
-            <div className="h-2 w-5/6 rounded bg-slate-200" />
-            <div className="h-2 w-2/3 rounded bg-slate-200" />
-            <div className="my-3" />
-            <div className="h-2 w-full rounded bg-slate-200" />
-            <div className="h-2 w-11/12 rounded bg-slate-200" />
-            <div className="h-2 w-3/4 rounded bg-slate-200" />
-          </div>
-        </div>
+        {status === 'success' ? (
+          <iframe
+            src={pdfUrl}
+            title={`Apercu du document ${document.title}`}
+            className="h-[400px] w-full rounded-md border border-slate-200 bg-white"
+          />
+        ) : (
+          <PreviewSkeleton loading={status === 'loading'} />
+        )}
 
         {/* Meta-donnees du document */}
         <dl className="mt-4 space-y-2 text-sm">
@@ -74,9 +100,7 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
             <dt className="sr-only">Type</dt>
             <dd>
               <span className="text-slate-500">Type :</span>{' '}
-              <span className="font-medium text-slate-800 capitalize">
-                {document.type}
-              </span>
+              <span className="font-medium text-slate-800 capitalize">{document.type}</span>
             </dd>
           </div>
           <div className="flex items-center gap-2 text-slate-600">
@@ -84,9 +108,7 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
             <dt className="sr-only">Reference</dt>
             <dd className="truncate">
               <span className="text-slate-500">Reference :</span>{' '}
-              <span className="font-mono text-xs text-slate-700">
-                {document.sothisDocumentId}
-              </span>
+              <span className="font-mono text-xs text-slate-700">{document.sothisDocumentId}</span>
             </dd>
           </div>
           {deadlineLabel && (
@@ -100,6 +122,36 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
             </div>
           )}
         </dl>
+      </div>
+    </div>
+  )
+}
+
+/**
+ * Squelette d'apercu utilise pendant le chargement et en fallback d'erreur.
+ * Aucune dependance, aucun crash possible.
+ */
+function PreviewSkeleton({ loading }: { loading: boolean }) {
+  return (
+    <div
+      className={cn(
+        'rounded-md border border-dashed border-slate-200 bg-slate-50/60 p-4',
+        loading && 'animate-pulse',
+      )}
+      aria-busy={loading}
+    >
+      <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">
+        {loading ? 'Chargement de l\'apercu' : 'Apercu indisponible'}
+      </p>
+      <div className="space-y-1.5" aria-hidden>
+        <div className="h-2 w-3/4 rounded bg-slate-200" />
+        <div className="h-2 w-full rounded bg-slate-200" />
+        <div className="h-2 w-5/6 rounded bg-slate-200" />
+        <div className="h-2 w-2/3 rounded bg-slate-200" />
+        <div className="my-3" />
+        <div className="h-2 w-full rounded bg-slate-200" />
+        <div className="h-2 w-11/12 rounded bg-slate-200" />
+        <div className="h-2 w-3/4 rounded bg-slate-200" />
       </div>
     </div>
   )
