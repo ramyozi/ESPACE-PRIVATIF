@@ -1,6 +1,5 @@
-import { Calendar, Download, FileText, FileType2, Hash, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Calendar, Download, FileText, FileType2, Hash } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { cn } from '@/lib/cn'
 import type { DocumentItem } from '@/services/api'
 
@@ -14,82 +13,48 @@ type PdfStatus = 'loading' | 'success' | 'error'
 /**
  * Carte preview d'un document a signer.
  *
- *  - on tente de charger le PDF via l'endpoint authentifie
- *    GET /api/documents/{id}/pdf (filtre tenant + user cote backend)
- *  - si la sonde HEAD reussit, on affiche le PDF dans un <iframe>
- *  - sinon (404, CORS, reseau), on retombe sur un skeleton sobre
- *  - le rendu n'est jamais cassant : pas de crash, juste un fallback
+ * Strategie de rendu :
+ *  - on monte l'<iframe> directement vers /api/documents/{id}/pdf
+ *  - tant que onLoad ne s'est pas declenche, on superpose un skeleton
+ *  - si l'iframe ne charge pas en 8 secondes, on bascule en "Apercu indisponible"
+ *  - le bouton "Telecharger" est un simple <a download> : le clic est une
+ *    navigation top-level, donc le cookie SameSite=None;Secure est envoye
+ *    meme cross-origin (ce qui n'est pas garanti pour les fetch+Blob).
+ *
+ * Aucune sonde fetch prealable : elle peut echouer pour des raisons CORS /
+ * 3rd-party-cookies sans que le rendu reel pose probleme. On laisse le
+ * navigateur tenter, et on bascule en fallback uniquement si rien ne charge.
  */
 export function DocumentPreviewCard({ document, className }: DocumentPreviewCardProps) {
   const [status, setStatus] = useState<PdfStatus>('loading')
-  const [downloading, setDownloading] = useState(false)
+  const timerRef = useRef<number | null>(null)
 
   // Base API : VITE_API_BASE_URL en prod, vide en dev (proxy Vite).
   const apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
   const pdfUrl = `${apiBase}/api/documents/${document.id}/pdf`
   const pdfDownloadUrl = `${pdfUrl}?download=1`
 
-  /**
-   * Telechargement via fetch + Blob plutot qu'un simple <a download>.
-   * Avantage : on conserve l'auth par cookie cross-origin et on peut
-   * proposer un nom de fichier propre cote client.
-   */
-  async function handleDownload() {
-    if (status !== 'success' || downloading) return
-    setDownloading(true)
-    try {
-      const res = await fetch(pdfDownloadUrl, {
-        method: 'GET',
-        credentials: 'include',
-      })
-      if (!res.ok) throw new Error('download_failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = window.document.createElement('a')
-      a.href = url
-      // Slug local (le backend pose deja un Content-Disposition propre,
-      // ceci sert juste de fallback si le navigateur ne lit pas le header).
-      a.download = (document.title.replace(/[^A-Za-z0-9._-]+/g, '-') || 'document') + '.pdf'
-      window.document.body.appendChild(a)
-      a.click()
-      window.document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } catch {
-      // Erreur silencieuse : on n'interrompt pas la signature pour autant.
-      // L'utilisateur peut reessayer ou continuer la signature.
-    } finally {
-      setDownloading(false)
-    }
-  }
-
   useEffect(() => {
-    let cancelled = false
-    setStatus('loading')
-
-    fetch(pdfUrl, { method: 'GET', credentials: 'include' })
-      .then(async (res) => {
-        if (cancelled) return
-        if (!res.ok) {
-          setStatus('error')
-          return
-        }
-        const ct = res.headers.get('Content-Type') ?? ''
-        // On exige bien un PDF : si le backend renvoie du JSON (erreur)
-        // ou un HTML d'erreur, on bascule sur le skeleton.
-        if (!ct.toLowerCase().includes('application/pdf')) {
-          setStatus('error')
-          return
-        }
-        setStatus('success')
-      })
-      .catch(() => {
-        if (!cancelled) setStatus('error')
-      })
-
+    // Garde-fou : si l'iframe ne se charge pas en 8s, on bascule en fallback.
+    timerRef.current = window.setTimeout(() => {
+      setStatus((s) => (s === 'loading' ? 'error' : s))
+    }, 8000)
     return () => {
-      cancelled = true
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     }
   }, [pdfUrl])
+
+  function handleIframeLoad() {
+    if (timerRef.current !== null) {
+      window.clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    setStatus('success')
+  }
+
+  function handleIframeError() {
+    setStatus('error')
+  }
 
   const deadlineLabel = document.deadline
     ? new Date(document.deadline).toLocaleDateString('fr-FR', {
@@ -99,6 +64,10 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
       })
     : null
 
+  // Nom propose au navigateur si l'attribut download est respecte (le backend
+  // pose deja un Content-Disposition propre, c'est juste un fallback).
+  const downloadName = (document.title.replace(/[^A-Za-z0-9._-]+/g, '-') || 'document') + '.pdf'
+
   return (
     <div
       className={cn(
@@ -106,7 +75,7 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
         className,
       )}
     >
-      {/* En-tete avec icone PDF + bouton telecharger */}
+      {/* En-tete : titre + bouton telecharger (toujours actif) */}
       <div className="flex items-center gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-md bg-blue-100 text-blue-700">
           <FileText className="h-5 w-5" aria-hidden />
@@ -115,38 +84,44 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
           <p className="truncate text-sm font-semibold text-slate-900">{document.title}</p>
           <p className="text-xs text-slate-500">{document.sothisDocumentId}</p>
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={handleDownload}
-          disabled={status !== 'success' || downloading}
-          title={
-            status === 'success'
-              ? 'Telecharger le document'
-              : "PDF indisponible pour le moment"
-          }
+        {/* Lien direct : top-level navigation, cookie cross-origin envoye
+            sous SameSite=None+Secure. Plus fiable qu'un fetch+Blob. */}
+        <a
+          href={pdfDownloadUrl}
+          download={downloadName}
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Telecharger le document"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900"
         >
-          {downloading ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-          ) : (
-            <Download className="h-4 w-4" aria-hidden />
-          )}
+          <Download className="h-4 w-4" aria-hidden />
           <span className="hidden sm:inline">Telecharger</span>
-        </Button>
+        </a>
       </div>
 
-      {/* Zone preview : iframe si OK, skeleton sinon (loading et error) */}
+      {/* Zone preview : iframe avec overlay skeleton tant que onLoad n'a pas tire */}
       <div className="flex-1 space-y-2 p-5">
-        {status === 'success' ? (
+        <div className="relative h-[400px] w-full overflow-hidden rounded-md border border-slate-200 bg-white">
+          {/* L'iframe est toujours montee : le navigateur tente de charger.
+              Si erreur reseau / 4xx, onError se declenche -> fallback. */}
           <iframe
             src={pdfUrl}
             title={`Apercu du document ${document.title}`}
-            className="h-[400px] w-full rounded-md border border-slate-200 bg-white"
+            className={cn(
+              'h-full w-full bg-white transition-opacity',
+              status === 'success' ? 'opacity-100' : 'opacity-0',
+            )}
+            onLoad={handleIframeLoad}
+            onError={handleIframeError}
           />
-        ) : (
-          <PreviewSkeleton loading={status === 'loading'} />
-        )}
+
+          {/* Overlay : skeleton pendant le chargement, message si echec. */}
+          {status !== 'success' && (
+            <div className="absolute inset-0 flex items-center justify-center p-4">
+              <PreviewSkeleton loading={status === 'loading'} />
+            </div>
+          )}
+        </div>
 
         {/* Meta-donnees du document */}
         <dl className="mt-4 space-y-2 text-sm">
@@ -183,20 +158,20 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
 }
 
 /**
- * Squelette d'apercu utilise pendant le chargement et en fallback d'erreur.
- * Aucune dependance, aucun crash possible.
+ * Squelette d'apercu : pulse pendant le chargement, message discret en
+ * fallback d'erreur. Aucune dependance, aucun crash possible.
  */
 function PreviewSkeleton({ loading }: { loading: boolean }) {
   return (
     <div
       className={cn(
-        'rounded-md border border-dashed border-slate-200 bg-slate-50/60 p-4',
+        'w-full rounded-md border border-dashed border-slate-200 bg-slate-50/80 p-4',
         loading && 'animate-pulse',
       )}
       aria-busy={loading}
     >
       <p className="mb-3 text-xs font-medium uppercase tracking-wider text-slate-400">
-        {loading ? 'Chargement de l\'apercu' : 'Apercu indisponible'}
+        {loading ? "Chargement de l'apercu" : 'Apercu indisponible'}
       </p>
       <div className="space-y-1.5" aria-hidden>
         <div className="h-2 w-3/4 rounded bg-slate-200" />
@@ -208,6 +183,11 @@ function PreviewSkeleton({ loading }: { loading: boolean }) {
         <div className="h-2 w-11/12 rounded bg-slate-200" />
         <div className="h-2 w-3/4 rounded bg-slate-200" />
       </div>
+      {!loading && (
+        <p className="mt-3 text-xs text-slate-500">
+          Vous pouvez toujours telecharger le document via le bouton ci-dessus.
+        </p>
+      )}
     </div>
   )
 }
