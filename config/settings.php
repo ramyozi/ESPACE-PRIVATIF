@@ -12,6 +12,10 @@ return [
             'env' => $_ENV['APP_ENV'] ?? 'prod',
             'debug' => filter_var($_ENV['APP_DEBUG'] ?? 'false', FILTER_VALIDATE_BOOLEAN),
             'url' => $_ENV['APP_URL'] ?? 'http://localhost:8080',
+            // URL publique du frontend (Vercel en prod). Sert a construire
+            // les liens dans les emails (ex. lien reset password).
+            // Fallback sur APP_URL si non defini (utile en local meme origine).
+            'frontendUrl' => $_ENV['FRONTEND_URL'] ?? ($_ENV['APP_URL'] ?? 'http://localhost:5173'),
             'secret' => $_ENV['APP_SECRET'] ?? 'change-me',
             // Liste blanche d'origines autorisees pour CORS (separees par virgule).
             // Vide = pas de header CORS (mode local meme origine).

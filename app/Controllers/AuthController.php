@@ -8,6 +8,8 @@ use App\Http\JsonResponse;
 use App\Repositories\UserRepository;
 use App\Security\CsrfTokenManager;
 use App\Services\AuthService;
+use App\Services\PasswordResetService;
+use RuntimeException;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 
@@ -20,7 +22,60 @@ final class AuthController
         private readonly AuthService $authService,
         private readonly UserRepository $userRepository,
         private readonly CsrfTokenManager $csrf,
+        private readonly PasswordResetService $passwordReset,
     ) {
+    }
+
+    /**
+     * Demande de reinitialisation de mot de passe.
+     * Body : { "email": "..." }
+     *
+     * Retourne TOUJOURS 200 anti-enumeration : meme si l'email n'existe pas,
+     * on repond comme si tout s'etait bien passe.
+     */
+    public function forgotPassword(Request $request, Response $response): Response
+    {
+        $body = (array) ($request->getParsedBody() ?? []);
+        $email = trim((string) ($body['email'] ?? ''));
+
+        if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return JsonResponse::error($response, 'invalid_input', 'Email invalide', 422);
+        }
+
+        $this->passwordReset->requestReset($email);
+
+        // Reponse generique : on ne dit jamais si l'email existe ou non.
+        return JsonResponse::ok($response, [
+            'message' => 'Si cette adresse correspond a un compte, un email vient d\'etre envoye.',
+        ]);
+    }
+
+    /**
+     * Soumission du nouveau mot de passe avec le token recu par mail.
+     * Body : { "token": "...", "newPassword": "..." }
+     */
+    public function resetPassword(Request $request, Response $response): Response
+    {
+        $body = (array) ($request->getParsedBody() ?? []);
+        $token = (string) ($body['token'] ?? '');
+        $newPassword = (string) ($body['newPassword'] ?? '');
+
+        try {
+            $this->passwordReset->resetPassword($token, $newPassword);
+        } catch (RuntimeException $e) {
+            $code = $e->getMessage();
+            $status = match ($code) {
+                'invalid_token' => 400,
+                'password_too_short' => 422,
+                'user_not_found' => 404,
+                default => 500,
+            };
+            return JsonResponse::error($response, $code, 'Reinitialisation impossible', $status);
+        }
+
+        return JsonResponse::ok($response, [
+            'message' => 'Mot de passe reinitialise. Vous pouvez vous reconnecter.',
+        ]);
     }
 
     /**

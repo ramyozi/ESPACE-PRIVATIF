@@ -25,48 +25,65 @@ type PdfStatus = 'loading' | 'success' | 'error'
  * 3rd-party-cookies sans que le rendu reel pose probleme. On laisse le
  * navigateur tenter, et on bascule en fallback uniquement si rien ne charge.
  */
-export function DocumentPreviewCard({ document, className }: DocumentPreviewCardProps) {
+export function DocumentPreviewCard({ document: doc, className }: DocumentPreviewCardProps) {
   const [status, setStatus] = useState<PdfStatus>('loading')
   const timerRef = useRef<number | null>(null)
 
   // Base API : VITE_API_BASE_URL en prod, vide en dev (proxy Vite).
   const apiBase = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/+$/, '')
-  const pdfUrl = `${apiBase}/api/documents/${document.id}/pdf`
+  const pdfUrl = `${apiBase}/api/documents/${doc.id}/pdf`
   const pdfDownloadUrl = `${pdfUrl}?download=1`
 
   useEffect(() => {
-    // Garde-fou : si l'iframe ne se charge pas en 8s, on bascule en fallback.
+    let cancelled = false
+    setStatus('loading')
+
+    // Sonde Content-Type : on demande le PDF en GET et on regarde le header
+    // de reponse. Si ce n'est pas un PDF (404 JSON, 401, HTML d'erreur, etc.),
+    // on bascule directement en "Apercu indisponible" sans jamais afficher
+    // l'iframe (qui sinon rendrait le JSON brut).
+    fetch(pdfUrl, { method: 'GET', credentials: 'include' })
+      .then((res) => {
+        if (cancelled) return
+        const ct = (res.headers.get('Content-Type') ?? '').toLowerCase()
+        if (res.ok && ct.includes('application/pdf')) {
+          setStatus('success')
+        } else {
+          setStatus('error')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setStatus('error')
+      })
+
+    // Garde-fou ultime : si la sonde traine plus de 8s sans repondre,
+    // on tombe sur le skeleton "Apercu indisponible" pour ne pas bloquer.
     timerRef.current = window.setTimeout(() => {
+      if (cancelled) return
       setStatus((s) => (s === 'loading' ? 'error' : s))
     }, 8000)
+
     return () => {
+      cancelled = true
       if (timerRef.current !== null) window.clearTimeout(timerRef.current)
     }
   }, [pdfUrl])
-
-  function handleIframeLoad() {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current)
-      timerRef.current = null
-    }
-    setStatus('success')
-  }
 
   function handleIframeError() {
     setStatus('error')
   }
 
-  const deadlineLabel = document.deadline
-    ? new Date(document.deadline).toLocaleDateString('fr-FR', {
+  const deadlineLabel = doc.deadline
+    ? new Date(doc.deadline).toLocaleDateString('fr-FR', {
         day: '2-digit',
         month: 'long',
         year: 'numeric',
       })
     : null
 
-  // Nom propose au navigateur si l'attribut download est respecte (le backend
-  // pose deja un Content-Disposition propre, c'est juste un fallback).
-  const downloadName = (document.title.replace(/[^A-Za-z0-9._-]+/g, '-') || 'document') + '.pdf'
+  function handleDownload() {
+    window.open(pdfDownloadUrl, '_blank')
+  }
 
   return (
     <div
@@ -82,42 +99,29 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
           <FileText className="h-5 w-5" aria-hidden />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900 dark:text-sand-50">{document.title}</p>
-          <p className="text-xs text-slate-500 dark:text-sand-300">{document.sothisDocumentId}</p>
+          <p className="truncate text-sm font-semibold text-slate-900 dark:text-sand-50">{doc.title}</p>
+          <p className="text-xs text-slate-500 dark:text-sand-300">{doc.sothisDocumentId}</p>
         </div>
         {/* Lien direct : top-level navigation, cookie cross-origin envoye
             sous SameSite=None+Secure. Plus fiable qu'un fetch+Blob. */}
-        <a
-          href={pdfDownloadUrl}
-          download={downloadName}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="Telecharger le document"
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-md px-3 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-sand-100 dark:hover:bg-brand-700"
-        >
-          <Download className="h-4 w-4" aria-hidden />
-          <span className="hidden sm:inline">Telecharger</span>
-        </a>
+        <button onClick={handleDownload}>
+          <Download className="h-4 w-4" />
+        </button> 
       </div>
 
-      {/* Zone preview : iframe avec overlay skeleton tant que onLoad n'a pas tire */}
+      {/* Zone preview : iframe affichee uniquement si la sonde a confirme un PDF.
+          Sinon on rend le skeleton "loading" ou "Apercu indisponible". */}
       <div className="flex-1 space-y-2 p-5">
         <div className="relative h-[400px] w-full overflow-hidden rounded-md border border-slate-200 bg-white dark:border-brand-700 dark:bg-sand-50">
-          {/* L'iframe est toujours montee : le navigateur tente de charger.
-              Si erreur reseau / 4xx, onError se declenche -> fallback. */}
-          <iframe
-            src={pdfUrl}
-            title={`Apercu du document ${document.title}`}
-            className={cn(
-              'h-full w-full bg-white transition-opacity',
-              status === 'success' ? 'opacity-100' : 'opacity-0',
-            )}
-            onLoad={handleIframeLoad}
-            onError={handleIframeError}
-          />
-
-          {/* Overlay : skeleton pendant le chargement, message si echec. */}
-          {status !== 'success' && (
+          {status === 'success' ? (
+            <iframe
+              src={pdfUrl}
+              title={`Apercu du document ${doc.title}`}
+              className="h-full w-full bg-white"
+              sandbox="allow-same-origin allow-scripts"
+              onError={handleIframeError}
+            />
+          ) : (
             <div className="absolute inset-0 flex items-center justify-center p-4">
               <PreviewSkeleton loading={status === 'loading'} />
             </div>
@@ -131,7 +135,7 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
             <dt className="sr-only">Type</dt>
             <dd>
               <span className="text-slate-500 dark:text-sand-300">Type :</span>{' '}
-              <span className="font-medium capitalize text-slate-800 dark:text-sand-50">{document.type}</span>
+              <span className="font-medium capitalize text-slate-800 dark:text-sand-50">{doc.type}</span>
             </dd>
           </div>
           <div className="flex items-center gap-2 text-slate-600 dark:text-sand-200">
@@ -139,7 +143,7 @@ export function DocumentPreviewCard({ document, className }: DocumentPreviewCard
             <dt className="sr-only">Reference</dt>
             <dd className="truncate">
               <span className="text-slate-500 dark:text-sand-300">Reference :</span>{' '}
-              <span className="font-mono text-xs text-slate-700 dark:text-sand-100">{document.sothisDocumentId}</span>
+              <span className="font-mono text-xs text-slate-700 dark:text-sand-100">{doc.sothisDocumentId}</span>
             </dd>
           </div>
           {deadlineLabel && (
