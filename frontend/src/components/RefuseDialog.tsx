@@ -48,7 +48,7 @@ export function RefuseDialog({ onConfirm, onCancel }: RefuseDialogProps) {
         <form onSubmit={handleSubmit}>
           <div className="space-y-3 px-5 pb-5">
             <p className="text-sm text-slate-600 dark:text-sand-200">
-              Indiquez la raison de votre refus. Cette information sera transmise au gestionnaire.
+              Indiquez la raison de votre refus. Cette information sera transmise a l'administrateur.
             </p>
             <textarea
               className="w-full rounded-md border border-slate-300 bg-white p-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:border-brand-500 dark:border-brand-700 dark:bg-brand-900 dark:text-sand-50"
@@ -56,7 +56,7 @@ export function RefuseDialog({ onConfirm, onCancel }: RefuseDialogProps) {
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               disabled={submitting}
-              placeholder="Loyer incorrect, clauses manquantes, etc."
+              placeholder="Erreur dans le document, clauses manquantes, etc."
             />
             {error && <ErrorMessage message={error} />}
           </div>
