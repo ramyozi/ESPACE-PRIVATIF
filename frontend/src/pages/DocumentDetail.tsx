@@ -90,7 +90,7 @@ export function DocumentDetailPage() {
     try {
       await api.refuseDocument(document.id, reason)
       setShowRefuseDialog(false)
-      setSuccess('Refus enregistre, le gestionnaire a ete notifie.')
+      setSuccess('Refus enregistre, le administrateur a ete notifie.')
       await loadDocument()
     } catch (e) {
       // Le dialog gere son propre encart d'erreur en relancant l'exception
@@ -175,13 +175,13 @@ export function DocumentDetailPage() {
 
             {document.state === 'signe' && (
               <p className="text-sm text-slate-500 dark:text-sand-200">
-                En attente de validation par le gestionnaire.
+                En attente de validation par le administrateur.
               </p>
             )}
 
             {document.state === 'signe_valide' && document.hasSignedPdf && (
               <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                Le document signe est disponible cote gestionnaire.
+                Le document signe est disponible cote administrateur.
               </p>
             )}
           </CardFooter>

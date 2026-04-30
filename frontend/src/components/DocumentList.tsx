@@ -11,7 +11,7 @@ interface DocumentListProps {
 }
 
 /**
- * Liste des documents du locataire.
+ * Liste des documents de l'utilisateur.
  * Affichee sous forme de cartes cliquables, chaque ligne menant au detail.
  */
 export function DocumentList({ documents }: DocumentListProps) {

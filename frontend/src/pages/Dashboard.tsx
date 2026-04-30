@@ -8,10 +8,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { ApiError, api, type DocumentItem } from '@/services/api'
 
 /**
- * Tableau de bord : liste des documents du locataire connecte.
+ * Tableau de bord : liste des documents du utilisateur connecte.
  *
  * Cas particulier : un admin n'a pas vocation a voir sa propre liste de
- * documents (il en cree pour les locataires). On le renvoie directement vers
+ * documents (il en cree pour les utilisateurs). On le renvoie directement vers
  * la page admin pour eviter toute confusion d'UX.
  */
 export function DashboardPage() {

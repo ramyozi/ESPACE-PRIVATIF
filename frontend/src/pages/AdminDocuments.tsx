@@ -25,10 +25,10 @@ interface AdminUser {
 }
 
 /**
- * Page Admin : creation et depot d'un document a signer pour un locataire.
+ * Page Admin : creation et depot d'un document a signer pour un utilisateur.
  *
  * Reutilise le flow existant : le document cree apparait immediatement chez
- * le locataire en etat "en_attente_signature" et est signable via /sign/start
+ * le destinataire en etat "en_attente_signature" et est signable via /sign/start
  * + OTP + /sign/complete (aucune logique nouvelle cote signature).
  */
 export function AdminDocumentsPage() {
@@ -80,7 +80,7 @@ export function AdminDocumentsPage() {
 
     const targetId = Number(userId)
     if (!targetId) {
-      setError('Selectionnez un locataire')
+      setError('Selectionnez un destinataire')
       return
     }
     if (!title.trim()) {
@@ -126,7 +126,7 @@ export function AdminDocumentsPage() {
           Deposer un document a signer
         </h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-sand-200">
-          Le document apparaitra immediatement dans l'espace du locataire choisi.
+          Le document apparaitra immediatement dans l'espace du destinataire choisi.
         </p>
       </header>
 
@@ -146,10 +146,10 @@ export function AdminDocumentsPage() {
         <CardContent>
           <form className="space-y-5" onSubmit={handleSubmit}>
             <div className="space-y-1.5">
-              <Label htmlFor="user">Locataire destinataire</Label>
+              <Label htmlFor="user">Destinataire</Label>
               {loadingUsers ? (
                 <div className="py-2 text-sm text-slate-500 dark:text-sand-200">
-                  <Loader size={14} /> Chargement des locataires...
+                  <Loader size={14} /> Chargement des utilisateurs...
                 </div>
               ) : (
                 <select
@@ -180,7 +180,7 @@ export function AdminDocumentsPage() {
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
                 disabled={submitting}
-                placeholder="Bail residence Les Lilas"
+                placeholder="Contrat, autorisation, attestation..."
                 required
                 maxLength={200}
               />
@@ -194,7 +194,7 @@ export function AdminDocumentsPage() {
                   value={type}
                   onChange={(e) => setType(e.target.value)}
                   disabled={submitting}
-                  placeholder="bail, avenant..."
+                  placeholder="contrat, attestation, autorisation..."
                   maxLength={40}
                 />
               </div>

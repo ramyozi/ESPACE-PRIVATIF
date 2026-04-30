@@ -14,7 +14,7 @@ export function Footer() {
         <div className="flex items-center gap-3">
           <Logo size={22} variant={resolved === 'dark' ? 'light' : 'default'} />
           <span className="hidden text-slate-300 dark:text-brand-700 sm:inline">|</span>
-          <span className="hidden sm:inline">Realsoft Immobilier</span>
+          <span className="hidden sm:inline">Realsoft</span>
         </div>
 
         <nav className="flex items-center gap-5 text-xs text-slate-500 dark:text-sand-300">

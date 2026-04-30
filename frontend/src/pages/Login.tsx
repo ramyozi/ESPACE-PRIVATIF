@@ -76,8 +76,9 @@ export function LoginPage() {
             Signez vos documents en toute serenite.
           </h1>
           <p className="mt-4 text-base leading-relaxed text-white/80">
-            Espace Privatif vous accompagne pour gerer vos documents
-            locatifs en quelques clics, depuis n'importe quel appareil.
+            Espace Privatif centralise vos contrats, documents administratifs
+            et autorisations. Signez en quelques clics, depuis n'importe quel
+            appareil.
           </p>
 
           <ul className="mt-8 space-y-3 text-sm text-white/90">
@@ -93,7 +94,7 @@ export function LoginPage() {
         </div>
 
         <p className="relative text-xs text-white/60">
-          &copy; {new Date().getFullYear()} Realsoft Immobilier
+          &copy; {new Date().getFullYear()} Realsoft
         </p>
       </aside>
 
