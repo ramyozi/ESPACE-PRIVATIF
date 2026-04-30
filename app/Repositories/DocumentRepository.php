@@ -33,6 +33,21 @@ final class DocumentRepository
         return array_map(static fn (array $row) => Document::fromRow($row), $stmt->fetchAll());
     }
 
+    /**
+     * Recupere un document par id + user_id, SANS filtrage tenant (le tenant
+     * est deduit du document lui-meme). Utilise par l'endpoint PDF qui valide
+     * via un token signe contenant uniquement userId + documentId.
+     */
+    public function findById(int $id, int $userId): ?Document
+    {
+        $stmt = $this->connection->pdo()->prepare(
+            'SELECT * FROM documents WHERE id = :id AND user_id = :user LIMIT 1'
+        );
+        $stmt->execute(['id' => $id, 'user' => $userId]);
+        $row = $stmt->fetch();
+        return $row ? Document::fromRow($row) : null;
+    }
+
     public function findForUser(int $id, int $tenantId, int $userId): ?Document
     {
         $stmt = $this->connection->pdo()->prepare(
